@@ -38,13 +38,31 @@
         <button type="button" class="chip solid" data-menu="resume">Resume</button>
         <button type="button" class="chip" data-menu="download">Download</button>
         <button type="button" class="chip" data-menu="rack">Rack</button>
+        <button type="button" class="chip" data-menu="console">Console</button>
+        <button type="button" class="chip" data-menu="cables">Cables</button>
         <button type="button" class="chip" data-menu="about">About</button>
         <button type="button" class="chip" data-menu="github">GitHub</button>
         <button type="button" class="chip" id="btn-reset">Reset view</button>
       </nav>
     </header>
 
-    <div id="hint" class="hint">Use the menu or click glowing objects · Drag to look around</div>
+    <div id="hint" class="hint">Menu · click rack devices for console · Cables to patch demos</div>
+
+    <div id="console-panel" class="console-panel" hidden>
+      <div class="console-toolbar">
+        <div class="console-dots"><i></i><i></i><i></i></div>
+        <strong id="console-title">admin@pa-3220</strong>
+        <div class="console-actions">
+          <button type="button" class="chip" id="console-run">Run demo</button>
+          <button type="button" class="chip" id="console-close">Close</button>
+        </div>
+      </div>
+      <pre id="console-out" class="console-out"></pre>
+      <form id="console-form" class="console-form">
+        <span id="console-prompt">admin@pa-3220&gt;</span>
+        <input id="console-input" type="text" autocomplete="off" spellcheck="false" placeholder="show interface, show system info, exit…" />
+      </form>
+    </div>
 
     <div id="hotspots"></div>
 
@@ -101,6 +119,6 @@
     </div>
   </div>
 
-  <script type="module" src="/assets/office.js"></script>
+  <script type="module" src="/assets/office.js?v=panel-rack-1"></script>
 </body>
 </html>

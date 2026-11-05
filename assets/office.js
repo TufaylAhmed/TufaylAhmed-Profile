@@ -29,14 +29,17 @@ const CONTENT = {
   rack: {
     title: "Network rack",
     html: `
-      <p>Hardware that mirrors the platforms I design and deliver:</p>
+      <p>Live demo gear — click a device face or use the menu:</p>
       <ul>
-        <li><strong>Palo Alto NGFW</strong> &amp; Prisma Access</li>
-        <li><strong>Cortex XSOAR</strong></li>
-        <li>Cisco · Extreme · Ruckus</li>
+        <li><strong>Palo Alto PA-3220</strong> NGFW</li>
+        <li><strong>Cisco Catalyst 9300</strong> switch</li>
+        <li><strong>Extreme 7520</strong> fabric</li>
+        <li>Patch panel · patch cables</li>
       </ul>
       <div class="panel-actions">
-        <button type="button" class="chip solid" data-go="resume">Open resume</button>
+        <button type="button" class="chip solid" data-go="console">Open console</button>
+        <button type="button" class="chip" data-go="cables">Show cables</button>
+        <button type="button" class="chip" data-go="resume">Resume</button>
       </div>`,
   },
   monitors: {
@@ -61,7 +64,72 @@ const state = {
   focus: null,
   animating: false,
   resumeOpen: false,
+  cablesOn: false,
+  activeDevice: "pa-3220",
 };
+
+const DEVICES = {
+  "pa-3220": {
+    title: "admin@pa-3220",
+    prompt: "admin@pa-3220>",
+    banner: [
+      "Palo Alto Networks PA-3220 series firewall",
+      "Hostname: pa-3220-bom",
+      "Model: PA-3220    Serial: 012345678901",
+      "Software: 11.1.2",
+      "------------------------------------------------",
+      "Type 'help' for demo commands.",
+    ],
+    cmds: {
+      help: "Commands: show system info | show interface all | show session info | show routing route | ping | clear | exit",
+      "show system info": "hostname: pa-3220-bom\nip-address: 10.10.10.1/24\nuptime: 42 days, 03:11:08\noperational-mode: normal\nmulti-vsys: off\ndevice-certificate-status: Valid",
+      "show interface all": "name     id    speed/duplex/state      mac\nethernet1/1  16  10G/full/up           08:66:da:11:22:01\nethernet1/2  17  10G/full/up           08:66:da:11:22:02\nethernet1/3  18  1G/full/up            08:66:da:11:22:03\ntunnel.1     50  n/a/n/a/up            n/a",
+      "show session info": "Number of sessions supported:                   1000000\nNumber of active sessions:                          1842\nPacket rate:                                      22140/s\nThroughput:                                       1.8 Gbps\nNew connection establish rate:                     312/s",
+      "show routing route": "flags: A:active, ?:loose, C:connect, H:host, S:static, ~:internal\n\nVIRTUAL ROUTER: default (id 1)\n==========\ndestination       nexthop         metric flags interface\n0.0.0.0/0         10.10.10.254    10     A S    ethernet1/1\n10.10.10.0/24     10.10.10.1      0      A C    ethernet1/1\n10.20.0.0/16      10.10.10.2      10     A S    ethernet1/2",
+      ping: "PING 8.8.8.8 (8.8.8.8) 56 data bytes\n64 bytes from 8.8.8.8: icmp_seq=1 ttl=117 time=12.4 ms\n64 bytes from 8.8.8.8: icmp_seq=2 ttl=117 time=11.9 ms\n--- 8.8.8.8 ping statistics ---\n2 packets transmitted, 2 received, 0% packet loss",
+    },
+  },
+  "cisco-9300": {
+    title: "admin@sw-core-01",
+    prompt: "sw-core-01#",
+    banner: [
+      "Cisco IOS XE Software, Catalyst 9300",
+      "Switch Ports Model              SW Version",
+      "------ ----- -----              ----------",
+      "*1     48    C9300-48U          17.09.04a",
+      "------------------------------------------------",
+      "Type 'help' for demo commands.",
+    ],
+    cmds: {
+      help: "Commands: show ip int brief | show vlan brief | show mac address-table | show cdp neighbors | clear | exit",
+      "show ip int brief": "Interface              IP-Address      OK? Method Status                Protocol\nGigabitEthernet1/0/1   unassigned      YES unset  up                    up\nGigabitEthernet1/0/24  10.10.10.2      YES NVRAM  up                    up\nVlan10                 10.20.10.1      YES NVRAM  up                    up\nVlan20                 10.20.20.1      YES NVRAM  up                    up",
+      "show vlan brief": "VLAN Name                             Status    Ports\n---- -------------------------------- --------- -------------------------------\n1    default                          active    Gi1/0/1, Gi1/0/2\n10   USERS                            active    Gi1/0/10-Gi1/0/20\n20   SERVERS                          active    Gi1/0/21-Gi1/0/23\n99   MGMT                             active    Gi1/0/24",
+      "show mac address-table": "Vlan    Mac Address       Type        Ports\n----    -----------       --------    -----\n10      08aa.bbcc.1101    DYNAMIC     Gi1/0/12\n20      08aa.bbcc.2202    DYNAMIC     Gi1/0/22\n99      0866.da11.2201    DYNAMIC     Gi1/0/24",
+      "show cdp neighbors": "Device ID        Local Intrfce     Holdtme    Capability  Platform  Port ID\npa-3220-bom      Gig 1/0/24        148        R S I       PA-3220   ethernet1/1\nru-sz-01         Gig 1/0/10        132        R T         R720      eth0",
+    },
+  },
+  "extreme-vsp": {
+    title: "admin@fabric-core",
+    prompt: "fabric-core:1#",
+    banner: [
+      "Extreme Networks Fabric Engine (VOSS)",
+      "System type           : 7520-48YE-8C",
+      "Software version      : 9.1.0.0",
+      "------------------------------------------------",
+      "Type 'help' for demo commands.",
+    ],
+    cmds: {
+      help: "Commands: show isis adjacencies | show i-sid | show vlan | clear | exit",
+      "show isis adjacencies": "================================================================================\nISIS Adjacencies\n================================================================================\nINTERFACE   L STATE        UPTIME   PRI  HOLDTIME  SYS ID\n1/1         1 UP           12d 4h   127  22        0011.2233.4401\n1/2         1 UP           12d 4h   127  21        0011.2233.4402",
+      "show i-sid": "================================================================================\ni-sid     vlan   type     name\n10010     10     elan     USERS\n10020     20     elan     SERVERS\n10099     99     elan     MGMT",
+      "show vlan": "================================================================================\nVLAN PORT\n================================================================================\nVLAN  NAME  TYPE  PORTS\n10    USERS  byPort  1/10-1/20\n20    SERVERS byPort 1/21-1/23",
+    },
+  },
+};
+
+let rackRef = null;
+let cableGroup = null;
+let devicePorts = {}; // id -> { left, right } world-local positions on rack
 
 const renderer = new THREE.WebGLRenderer({
   canvas,
@@ -276,6 +344,68 @@ function woodMat(shade = 0x4a2c1d) {
   return mat(shade, { roughness: 0.48, metalness: 0.04 });
 }
 
+function addVictorianPanelling(room, { wall = "back" } = {}) {
+  // Dark grey Victorian wainscot + raised panels
+  const panelGrey = mat(0x3a3f45, { roughness: 0.62, metalness: 0.08 });
+  const railGrey = mat(0x2c3036, { roughness: 0.55, metalness: 0.12 });
+  const trim = mat(0x4a5058, { roughness: 0.45, metalness: 0.15 });
+
+  if (wall === "back") {
+    // Dado rail
+    const dado = addShadow(new THREE.Mesh(new THREE.BoxGeometry(10.3, 0.08, 0.06), trim));
+    dado.position.set(0, 1.15, -4.24);
+    room.add(dado);
+    // Chair rail / picture rail
+    const picture = addShadow(new THREE.Mesh(new THREE.BoxGeometry(10.3, 0.06, 0.05), trim));
+    picture.position.set(0, 3.15, -4.24);
+    room.add(picture);
+    // Skirting
+    const skirt = addShadow(new THREE.Mesh(new THREE.BoxGeometry(10.3, 0.16, 0.07), railGrey));
+    skirt.position.set(0, 0.08, -4.24);
+    room.add(skirt);
+    // Crown
+    const crown = addShadow(new THREE.Mesh(new THREE.BoxGeometry(10.3, 0.12, 0.1), trim));
+    crown.position.set(0, 4.28, -4.22);
+    room.add(crown);
+
+    // Raised panels in a grid
+    for (let row = 0; row < 2; row++) {
+      for (let col = 0; col < 5; col++) {
+        const panel = addShadow(new THREE.Mesh(new THREE.BoxGeometry(1.7, 0.85, 0.04), panelGrey));
+        panel.position.set(-3.4 + col * 1.85, 0.55 + row * 1.75, -4.25);
+        room.add(panel);
+        const inset = new THREE.Mesh(new THREE.BoxGeometry(1.45, 0.62, 0.02), railGrey);
+        inset.position.set(-3.4 + col * 1.85, 0.55 + row * 1.75, -4.22);
+        room.add(inset);
+        // Bead molding hint
+        const bead = new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.68, 0.01), trim);
+        bead.position.set(-3.4 + col * 1.85, 0.55 + row * 1.75, -4.21);
+        room.add(bead);
+      }
+    }
+  } else {
+    const dado = addShadow(new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.08, 8.8), trim));
+    dado.position.set(-4.29, 1.15, 0.1);
+    room.add(dado);
+    const picture = addShadow(new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.06, 8.8), trim));
+    picture.position.set(-4.29, 3.15, 0.1);
+    room.add(picture);
+    const skirt = addShadow(new THREE.Mesh(new THREE.BoxGeometry(0.07, 0.16, 8.8), railGrey));
+    skirt.position.set(-4.29, 0.08, 0.1);
+    room.add(skirt);
+    for (let row = 0; row < 2; row++) {
+      for (let col = 0; col < 4; col++) {
+        const panel = addShadow(new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.85, 1.7), panelGrey));
+        panel.position.set(-4.3, 0.55 + row * 1.75, -2.7 + col * 1.9);
+        room.add(panel);
+        const inset = new THREE.Mesh(new THREE.BoxGeometry(0.02, 0.62, 1.45), railGrey);
+        inset.position.set(-4.27, 0.55 + row * 1.75, -2.7 + col * 1.9);
+        room.add(inset);
+      }
+    }
+  }
+}
+
 function createRoom() {
   const room = new THREE.Group();
 
@@ -289,13 +419,17 @@ function createRoom() {
     room.add(seam);
   }
 
-  const wallMat = mat(0x2c3530, { roughness: 0.94 });
+  // Dark grey wall base under panelling
+  const wallMat = mat(0x343940, { roughness: 0.9 });
   const back = addShadow(new THREE.Mesh(new THREE.BoxGeometry(10.5, 4.4, 0.16), wallMat));
   back.position.set(0, 2.2, -4.35);
   room.add(back);
   const left = addShadow(new THREE.Mesh(new THREE.BoxGeometry(0.16, 4.4, 9), wallMat));
   left.position.set(-4.4, 2.2, 0.1);
   room.add(left);
+
+  addVictorianPanelling(room, { wall: "back" });
+  addVictorianPanelling(room, { wall: "left" });
 
   // Window + blinds (right)
   const win = addShadow(new THREE.Mesh(new THREE.BoxGeometry(0.08, 2.4, 2.2), mat(0x111411)));
@@ -306,9 +440,6 @@ function createRoom() {
     blind.position.set(4.14, 1.2 + i * 0.15, -1.2);
     room.add(blind);
   }
-  const windowLight = new THREE.RectAreaLight
-    ? null
-    : null;
   const softWin = new THREE.DirectionalLight(0xffe6c8, 0.55);
   softWin.position.set(5, 3.5, -1);
   room.add(softWin);
@@ -326,6 +457,35 @@ function createRoom() {
   room.add(carpet);
 
   return room;
+}
+
+function addPerfumeBottle(parent, x, y, z, style = 0) {
+  const g = new THREE.Group();
+  const glassColors = [0xc9a36a, 0x1a3a4a, 0x4a2040, 0xd8c4a0, 0x2a4a3a, 0x6a2030];
+  const color = glassColors[style % glassColors.length];
+  const body = addShadow(
+    new THREE.Mesh(
+      style % 2 === 0
+        ? new THREE.CylinderGeometry(0.028, 0.035, 0.14, 12)
+        : new RoundedBoxGeometry(0.06, 0.14, 0.04, 1, 0.008),
+      mat(color, { roughness: 0.15, metalness: 0.35, transparent: true, opacity: 0.92 })
+    )
+  );
+  body.position.y = 0.07;
+  g.add(body);
+  const neck = addShadow(new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.014, 0.04, 10), mat(color, { metalness: 0.4, roughness: 0.2 })));
+  neck.position.y = 0.16;
+  g.add(neck);
+  const cap = addShadow(new THREE.Mesh(new THREE.CylinderGeometry(0.016, 0.016, 0.025, 10), mat(0xc9a227, { metalness: 0.85, roughness: 0.25 })));
+  cap.position.y = 0.19;
+  g.add(cap);
+  // Label band
+  const band = new THREE.Mesh(new THREE.CylinderGeometry(0.036, 0.036, 0.03, 12, 1, true), mat(0xf2e6d0, { roughness: 0.7 }));
+  band.position.y = 0.06;
+  g.add(band);
+  g.position.set(x, y, z);
+  parent.add(g);
+  return g;
 }
 
 function addBooksOnShelf(parent, x0, y, z, count, spread = 0.13) {
@@ -409,25 +569,34 @@ function createBookshelfDesk() {
     unit.add(board);
   });
 
-  // Books
+  // Books — denser on both cases + bridge
   addBooksOnShelf(unit, -2.05, 1.15, -2.05, 5, 0.12);
   addBooksOnShelf(unit, -2.05, 1.55, -2.05, 5, 0.12);
   addBooksOnShelf(unit, -2.05, 1.95, -2.05, 4, 0.13);
   addBooksOnShelf(unit, -2.05, 2.35, -2.05, 5, 0.12);
   addBooksOnShelf(unit, 1.45, 1.15, -2.05, 5, 0.12);
-  addBooksOnShelf(unit, 1.45, 1.55, -2.05, 4, 0.13);
+  addBooksOnShelf(unit, 1.45, 1.55, -2.05, 5, 0.12);
   addBooksOnShelf(unit, 1.45, 1.95, -2.05, 5, 0.12);
   addBooksOnShelf(unit, 1.45, 2.35, -2.05, 4, 0.13);
   addBooksOnShelf(unit, -1.1, 2.55, -2.05, 14, 0.15);
+  addBooksOnShelf(unit, -1.0, 2.85, -2.05, 10, 0.16);
+  // Extra books on the front-facing right rack shelves
+  addBooksOnShelf(unit, 1.42, 2.75, -2.05, 5, 0.12);
+  addBooksOnShelf(unit, 1.42, 3.1, -2.05, 4, 0.13);
 
-  // Decor bottles / boxes on shelves
-  for (let i = 0; i < 5; i++) {
-    const bottle = addShadow(new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.035, 0.16, 10), mat(0xb08968, { roughness: 0.3, metalness: 0.2 })));
-    bottle.position.set(-0.5 + i * 0.2, 2.98, -2.0);
-    unit.add(bottle);
+  // Perfume collection on the front/right rack (eye-level shelves)
+  const perfumeYs = [1.58, 1.98, 2.38];
+  perfumeYs.forEach((y, row) => {
+    for (let i = 0; i < 4; i++) {
+      addPerfumeBottle(unit, 1.48 + i * 0.1, y, -1.92, row * 4 + i);
+    }
+  });
+  // Bridge shelf colognes
+  for (let i = 0; i < 6; i++) {
+    addPerfumeBottle(unit, -0.55 + i * 0.14, 2.58, -1.95, i + 2);
   }
   const netBox = addShadow(new THREE.Mesh(new RoundedBoxGeometry(0.35, 0.12, 0.22, 1, 0.01), mat(0xe8e8e8)));
-  netBox.position.set(0.55, 2.72, -2.0);
+  netBox.position.set(0.85, 2.72, -2.0);
   unit.add(netBox);
 
   // Printer left
@@ -618,53 +787,275 @@ function createGamingChair() {
   return chair;
 }
 
-function createRack() {
-  const rack = new THREE.Group();
-  const cabinet = addShadow(new THREE.Mesh(new RoundedBoxGeometry(0.72, 2.15, 0.85, 2, 0.02), mat(0x1a1d22, { metalness: 0.35, roughness: 0.45 })));
-  cabinet.position.y = 1.075;
-  rack.add(cabinet);
+function makeCable(a, b, color = 0x2f9e44) {
+  const mid = a.clone().lerp(b, 0.5);
+  mid.z += 0.35 + Math.random() * 0.15;
+  mid.x += (Math.random() - 0.5) * 0.08;
+  const curve = new THREE.CatmullRomCurve3([a, mid, b]);
+  const geo = new THREE.TubeGeometry(curve, 24, 0.008, 6, false);
+  const mesh = new THREE.Mesh(geo, mat(color, { roughness: 0.55, metalness: 0.05 }));
+  mesh.castShadow = true;
+  return mesh;
+}
 
-  function unit(y, color, labelLines, accent) {
-    const u = new THREE.Group();
-    u.add(addShadow(new THREE.Mesh(new RoundedBoxGeometry(0.58, 0.16, 0.7, 1, 0.01), mat(color, { metalness: 0.25, roughness: 0.4 }))));
-    const face = new THREE.Mesh(
-      new THREE.PlaneGeometry(0.54, 0.12),
-      new THREE.MeshStandardMaterial({
-        map: makeLabelTexture(labelLines, { bg: "#111418", fg: "#f0f3f7", font: "bold 34px Helvetica" }),
-        roughness: 0.4,
-      })
+function buildDeviceChassis({ y, height, color, accent, title, subtitle, deviceId, portCount = 12 }) {
+  const u = new THREE.Group();
+  u.userData = {
+    id: "device",
+    deviceId,
+    focus: new THREE.Vector3(-2.55, y, -0.9),
+  };
+
+  const body = addShadow(
+    new THREE.Mesh(
+      new RoundedBoxGeometry(0.62, height, 0.72, 1, 0.01),
+      mat(color, { metalness: 0.28, roughness: 0.38 })
+    )
+  );
+  u.add(body);
+
+  // Front faceplate label
+  const face = new THREE.Mesh(
+    new THREE.PlaneGeometry(0.56, height * 0.42),
+    new THREE.MeshStandardMaterial({
+      map: makeLabelTexture([title, subtitle], {
+        bg: "#0f1318",
+        fg: "#f5f7fa",
+        font: "bold 32px Helvetica",
+      }),
+      roughness: 0.35,
+    })
+  );
+  face.position.set(0, height * 0.18, 0.365);
+  u.add(face);
+
+  // Status LED strip (Palo Alto orange / Cisco blue etc.)
+  const led = new THREE.Mesh(
+    new THREE.BoxGeometry(0.52, 0.018, 0.012),
+    mat(accent, { emissive: accent, emissiveIntensity: 1.1 })
+  );
+  led.position.set(0, height * 0.38, 0.365);
+  u.add(led);
+
+  // LCD / console window
+  const lcd = new THREE.Mesh(
+    new THREE.PlaneGeometry(0.2, 0.05),
+    mat(0x04140c, { emissive: 0x1aff8c, emissiveIntensity: 0.35 })
+  );
+  lcd.position.set(0.16, height * 0.18, 0.368);
+  u.add(lcd);
+
+  // Visible RJ45 / SFP ports
+  const ports = [];
+  const rowY = -height * 0.22;
+  for (let i = 0; i < portCount; i++) {
+    const px = -0.26 + (i % 8) * 0.065;
+    const py = rowY - Math.floor(i / 8) * 0.05;
+    const port = addShadow(new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.028, 0.035), mat(0x0a0a0a, { metalness: 0.4, roughness: 0.4 })));
+    port.position.set(px, py, 0.37);
+    // Port LED
+    const pLed = new THREE.Mesh(
+      new THREE.BoxGeometry(0.012, 0.008, 0.005),
+      mat(0x22ff66, { emissive: 0x22ff66, emissiveIntensity: 0.8 })
     );
-    face.position.set(0, 0, 0.36);
-    u.add(face);
-    const led = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.015, 0.01), mat(accent, { emissive: accent, emissiveIntensity: 0.95 }));
-    led.position.set(0, 0.055, 0.355);
-    u.add(led);
-    for (let i = 0; i < 8; i++) {
-      const port = new THREE.Mesh(new THREE.BoxGeometry(0.035, 0.03, 0.02), mat(0x0a0a0a));
-      port.position.set(-0.2 + i * 0.055, -0.03, 0.36);
-      u.add(port);
-    }
-    u.position.y = y;
-    return u;
+    pLed.position.set(px, py + 0.02, 0.385);
+    u.add(port, pLed);
+    ports.push(new THREE.Vector3(px, py, 0.4));
   }
 
-  rack.add(unit(1.85, 0xf2f2f2, ["PALO ALTO", "PA-3220 NGFW"], 0xff5a1f));
-  rack.add(unit(1.62, 0xe8e8e8, ["PRISMA", "SASE EDGE"], 0xff7a3d));
-  rack.add(unit(1.39, 0x1a1f28, ["CORTEX XSOAR", "SOAR NODE"], 0x00c0e8));
-  rack.add(unit(1.16, 0x0f3d66, ["CISCO", "CATALYST"], 0x1ba0d7));
-  rack.add(unit(0.93, 0x2a1438, ["EXTREME", "FABRIC"], 0x9b4dca));
-  rack.add(unit(0.7, 0x2b2b2b, ["RUCKUS", "SMARTZONE"], 0xf15a22));
-  rack.add(unit(0.47, 0x222222, ["PATCH", "PANEL 24P"], 0x88ff88));
+  // Console port
+  const consolePort = addShadow(new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.03, 0.03), mat(0x222)));
+  consolePort.position.set(-0.24, height * 0.18, 0.37);
+  u.add(consolePort);
 
-  const rl = new THREE.PointLight(0xff7a3d, 4, 3.5, 2);
-  rl.position.set(0, 1.8, 0.6);
+  u.position.y = y;
+  u.userData.ports = ports;
+  u.userData.deviceId = deviceId;
+  return u;
+}
+
+function createRack() {
+  const rack = new THREE.Group();
+  rackRef = rack;
+
+  // Open cabinet (no opaque door) so devices/ports stay visible
+  const cabinet = addShadow(
+    new THREE.Mesh(new RoundedBoxGeometry(0.78, 2.25, 0.9, 2, 0.02), mat(0x15181e, { metalness: 0.4, roughness: 0.42 }))
+  );
+  cabinet.position.y = 1.12;
+  rack.add(cabinet);
+  // Hollow front by dark inset
+  const cavity = new THREE.Mesh(new THREE.BoxGeometry(0.66, 2.05, 0.7), mat(0x0b0d11, { roughness: 0.9 }));
+  cavity.position.set(0, 1.12, 0.05);
+  rack.add(cavity);
+
+  // Rails
+  [-0.3, 0.3].forEach((x) => {
+    const rail = addShadow(new THREE.Mesh(new THREE.BoxGeometry(0.03, 2.0, 0.03), mat(0x7a808a, { metalness: 0.85, roughness: 0.28 })));
+    rail.position.set(x, 1.12, 0.4);
+    rack.add(rail);
+  });
+
+  const pa = buildDeviceChassis({
+    y: 1.95,
+    height: 0.28,
+    color: 0xf0f0f0,
+    accent: 0xff5a1f,
+    title: "PALO ALTO PA-3220",
+    subtitle: "NGFW · 10G · HA ready",
+    deviceId: "pa-3220",
+    portCount: 12,
+  });
+  const cisco = buildDeviceChassis({
+    y: 1.55,
+    height: 0.22,
+    color: 0x0d3a66,
+    accent: 0x1ba0d7,
+    title: "CISCO CATALYST 9300",
+    subtitle: "48U · StackWise",
+    deviceId: "cisco-9300",
+    portCount: 16,
+  });
+  const extreme = buildDeviceChassis({
+    y: 1.22,
+    height: 0.22,
+    color: 0x2a1438,
+    accent: 0x9b4dca,
+    title: "EXTREME 7520",
+    subtitle: "Fabric Engine · SPB",
+    deviceId: "extreme-vsp",
+    portCount: 12,
+  });
+  const patch = buildDeviceChassis({
+    y: 0.88,
+    height: 0.18,
+    color: 0x222222,
+    accent: 0x88ff88,
+    title: "PATCH PANEL 24P",
+    subtitle: "Cat6A · Keystone",
+    deviceId: "cisco-9300",
+    portCount: 16,
+  });
+
+  [pa, cisco, extreme, patch].forEach((d) => {
+    rack.add(d);
+    interactive.push(d);
+    devicePorts[d.userData.deviceId] = devicePorts[d.userData.deviceId] || [];
+    devicePorts[d.userData.deviceId].push(
+      ...d.userData.ports.map((p) => p.clone().add(new THREE.Vector3(0, d.position.y, 0)))
+    );
+  });
+
+  // PDU
+  const pdu = addShadow(new THREE.Mesh(new THREE.BoxGeometry(0.08, 1.8, 0.08), mat(0x222, { metalness: 0.5 })));
+  pdu.position.set(0.34, 1.1, -0.2);
+  rack.add(pdu);
+
+  cableGroup = new THREE.Group();
+  cableGroup.visible = false;
+  rack.add(cableGroup);
+
+  // Prebuild demo patch cables between PA <-> Cisco <-> Extreme <-> Patch
+  const links = [
+    ["pa-3220", "cisco-9300", 0xff5a1f],
+    ["cisco-9300", "extreme-vsp", 0x1ba0d7],
+    ["extreme-vsp", "cisco-9300", 0x9b4dca],
+    ["pa-3220", "extreme-vsp", 0xffaa44],
+  ];
+  links.forEach(([aId, bId, color], idx) => {
+    const aPorts = devicePorts[aId];
+    const bPorts = devicePorts[bId];
+    if (!aPorts?.length || !bPorts?.length) return;
+    const a = aPorts[Math.min(idx, aPorts.length - 1)].clone();
+    const b = bPorts[Math.min(idx + 2, bPorts.length - 1)].clone();
+    cableGroup.add(makeCable(a, b, color));
+  });
+
+  const rl = new THREE.PointLight(0xff7a3d, 5, 4, 2);
+  rl.position.set(0, 1.9, 0.7);
   rack.add(rl);
 
+  // Front label plaque
+  const plaque = new THREE.Mesh(
+    new THREE.PlaneGeometry(0.5, 0.08),
+    new THREE.MeshBasicMaterial({
+      map: makeLabelTexture(["NETWORK RACK · DEMO LAB"], { bg: "#111", fg: "#ffb089", font: "bold 28px Helvetica" }),
+    })
+  );
+  plaque.position.set(0, 2.28, 0.42);
+  rack.add(plaque);
+
   rack.position.set(-2.55, 0, -1.35);
-  rack.userData = { id: "rack", focus: new THREE.Vector3(-2.55, 1.3, -1.15) };
+  rack.userData = { id: "rack", focus: new THREE.Vector3(-2.55, 1.35, -0.95) };
   interactive.push(rack);
-  hotspotDefs.push({ id: "rack", label: "Network rack", object: rack, offset: new THREE.Vector3(0, 2.3, 0.2) });
+  hotspotDefs.push({ id: "rack", label: "Network rack", object: rack, offset: new THREE.Vector3(0, 2.4, 0.25) });
   return rack;
+}
+
+function toggleCables(force) {
+  if (!cableGroup) return;
+  state.cablesOn = typeof force === "boolean" ? force : !state.cablesOn;
+  cableGroup.visible = state.cablesOn;
+  if (state.cablesOn) {
+    hintEl.textContent = "Cables connected · click a firewall/switch for console";
+    hintEl.classList.remove("hide");
+  }
+}
+
+function openConsole(deviceId = state.activeDevice) {
+  const id = DEVICES[deviceId] ? deviceId : "pa-3220";
+  const conf = DEVICES[id];
+  state.activeDevice = id;
+  const panel = document.getElementById("console-panel");
+  document.getElementById("console-title").textContent = conf.title;
+  document.getElementById("console-prompt").textContent = conf.prompt;
+  document.getElementById("console-out").textContent = conf.banner.join("\n") + "\n";
+  panel.hidden = false;
+  document.getElementById("console-input").focus();
+}
+
+function appendConsole(text) {
+  const out = document.getElementById("console-out");
+  out.textContent += text + (text.endsWith("\n") ? "" : "\n");
+  out.scrollTop = out.scrollHeight;
+}
+
+function runConsoleCommand(raw) {
+  const conf = DEVICES[state.activeDevice] || DEVICES["pa-3220"];
+  const cmd = raw.trim().toLowerCase();
+  appendConsole(`${conf.prompt} ${raw}`);
+  if (!cmd) return;
+  if (cmd === "clear") {
+    document.getElementById("console-out").textContent = "";
+    return;
+  }
+  if (cmd === "exit") {
+    document.getElementById("console-panel").hidden = true;
+    return;
+  }
+  if (cmd === "run demo" || cmd === "demo") {
+    runDeviceDemo();
+    return;
+  }
+  const key = Object.keys(conf.cmds).find((k) => k === cmd);
+  appendConsole(key ? conf.cmds[key] : `% Unknown command: ${raw}\nType 'help'`);
+}
+
+async function runDeviceDemo() {
+  const conf = DEVICES[state.activeDevice] || DEVICES["pa-3220"];
+  const steps =
+    state.activeDevice === "cisco-9300"
+      ? ["show ip int brief", "show vlan brief", "show cdp neighbors"]
+      : state.activeDevice === "extreme-vsp"
+        ? ["show isis adjacencies", "show i-sid"]
+        : ["show system info", "show interface all", "show session info", "ping"];
+  for (const step of steps) {
+    appendConsole(`${conf.prompt} ${step}`);
+    await new Promise((r) => setTimeout(r, 350));
+    appendConsole(conf.cmds[step] || "");
+    await new Promise((r) => setTimeout(r, 450));
+  }
+  appendConsole("\n[demo complete] Interfaces up · tunnels healthy · routes active.");
 }
 
 function createGithubFrame() {
@@ -782,7 +1173,7 @@ function closePanel() {
   panelEl.hidden = true;
 }
 
-async function focusObject(id) {
+async function focusObject(id, deviceId) {
   hintEl.classList.add("hide");
   if (id === "resume") {
     await openResume();
@@ -790,6 +1181,40 @@ async function focusObject(id) {
   }
   if (id === "download") {
     downloadModal.hidden = false;
+    return;
+  }
+  if (id === "cables") {
+    const rack = interactive.find((o) => o.userData.id === "rack");
+    if (rack) {
+      const focus = rack.userData.focus.clone();
+      const camPos = focus.clone().add(new THREE.Vector3(1.7, 0.45, 1.35));
+      await animateCamera(camPos, focus, 0.95);
+    }
+    toggleCables(true);
+    openPanel("rack");
+    return;
+  }
+  if (id === "console") {
+    const rack = interactive.find((o) => o.userData.id === "rack");
+    if (rack) {
+      const focus = rack.userData.focus.clone();
+      const camPos = focus.clone().add(new THREE.Vector3(1.55, 0.5, 1.25));
+      await animateCamera(camPos, focus, 0.95);
+    }
+    toggleCables(true);
+    openConsole(state.activeDevice || "pa-3220");
+    return;
+  }
+  if (id === "device") {
+    const rack = interactive.find((o) => o.userData.id === "rack");
+    const focus = (rack?.userData.focus || new THREE.Vector3(-2.55, 1.35, -0.95)).clone();
+    if (deviceId === "pa-3220") focus.y = 1.95;
+    if (deviceId === "cisco-9300") focus.y = 1.55;
+    if (deviceId === "extreme-vsp") focus.y = 1.22;
+    const camPos = focus.clone().add(new THREE.Vector3(1.35, 0.25, 1.15));
+    await animateCamera(camPos, focus, 0.9);
+    toggleCables(true);
+    openConsole(deviceId || "pa-3220");
     return;
   }
 
@@ -803,6 +1228,7 @@ async function focusObject(id) {
   if (id === "monitors") dir.set(0.3, 0.55, 1.6);
   const camPos = focus.clone().add(dir.normalize().multiplyScalar(id === "rack" ? 2.35 : 2.7));
   await animateCamera(camPos, focus, 1.0);
+  if (id === "rack") toggleCables(true);
   openPanel(id);
   state.focus = id;
 }
@@ -827,13 +1253,6 @@ function closeResume() {
   state.resumeOpen = false;
 }
 
-async function resetView() {
-  closePanel();
-  closeResume();
-  await animateCamera(defaultCam.position, defaultCam.target, 1);
-  state.focus = null;
-}
-
 function onPointer(event) {
   if (state.animating || state.resumeOpen) return;
   const rect = canvas.getBoundingClientRect();
@@ -844,7 +1263,9 @@ function onPointer(event) {
   if (!hits.length) return;
   let obj = hits[0].object;
   while (obj && !obj.userData?.id) obj = obj.parent;
-  if (obj?.userData?.id) focusObject(obj.userData.id);
+  if (!obj?.userData?.id) return;
+  if (obj.userData.id === "device") focusObject("device", obj.userData.deviceId);
+  else focusObject(obj.userData.id);
 }
 
 function onMove(event) {
@@ -887,6 +1308,28 @@ document.querySelectorAll("[data-close-dl]").forEach((el) =>
 document.querySelectorAll("[data-menu]").forEach((btn) => {
   btn.addEventListener("click", () => focusObject(btn.getAttribute("data-menu")));
 });
+
+document.getElementById("console-close").addEventListener("click", () => {
+  document.getElementById("console-panel").hidden = true;
+});
+document.getElementById("console-run").addEventListener("click", () => {
+  runDeviceDemo();
+});
+document.getElementById("console-form").addEventListener("submit", (e) => {
+  e.preventDefault();
+  const input = document.getElementById("console-input");
+  runConsoleCommand(input.value);
+  input.value = "";
+});
+
+async function resetView() {
+  closePanel();
+  closeResume();
+  document.getElementById("console-panel").hidden = true;
+  toggleCables(false);
+  await animateCamera(defaultCam.position, defaultCam.target, 1);
+  state.focus = null;
+}
 
 const dlForm = document.getElementById("dl-form");
 const dlStatus = document.getElementById("dl-status");
