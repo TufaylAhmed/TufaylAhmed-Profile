@@ -1,6 +1,7 @@
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { RoundedBoxGeometry } from "three/addons/geometries/RoundedBoxGeometry.js";
+import { TDSLoader } from "three/addons/loaders/TDSLoader.js";
 
 const canvas = document.getElementById("c");
 const loaderEl = document.getElementById("loader");
@@ -265,79 +266,100 @@ function makeWorkMonitorTexture() {
   );
 }
 
-function makeIranianCarpetTexture() {
-  return makeCanvasTexture((g, w, h) => {
-    // Base field — classic Iranian madder red
-    g.fillStyle = "#7a1f24";
-    g.fillRect(0, 0, w, h);
+const CARPET_BASE = "/assets/models/carpet-ikea-persian/";
 
-    // Outer borders
-    const borders = [
-      ["#d9c7a1", 18],
-      ["#1a2740", 28],
-      ["#c4a35a", 10],
-      ["#f2e6c9", 8],
-    ];
-    let inset = 0;
-    borders.forEach(([color, thick]) => {
-      g.strokeStyle = color;
-      g.lineWidth = thick;
-      g.strokeRect(inset + thick / 2, inset + thick / 2, w - inset * 2 - thick, h - inset * 2 - thick);
-      inset += thick;
+function fitCarpetModel(object, { targetWidth = 3.9, targetDepth = 2.75, y = 0.012 } = {}) {
+  const box = new THREE.Box3().setFromObject(object);
+  const size = new THREE.Vector3();
+  box.getSize(size);
+  const center = new THREE.Vector3();
+  box.getCenter(center);
+
+  // Center on origin first
+  object.position.sub(center);
+
+  // Archicad / 3DS carpets are often authored lying on XY or ZX — force flat on floor
+  if (size.y > size.x * 0.35 && size.y > size.z * 0.35) {
+    object.rotation.x = -Math.PI / 2;
+    object.updateMatrixWorld(true);
+    box.setFromObject(object);
+    box.getSize(size);
+    box.getCenter(center);
+    object.position.sub(center);
+  }
+
+  const sx = targetWidth / Math.max(size.x, 0.001);
+  const sz = targetDepth / Math.max(size.z, 0.001);
+  const s = Math.min(sx, sz);
+  object.scale.setScalar(s);
+  object.updateMatrixWorld(true);
+  box.setFromObject(object);
+  box.getCenter(center);
+  object.position.x -= center.x;
+  object.position.z -= center.z;
+  object.position.y += y - box.min.y;
+
+  object.traverse((child) => {
+    if (!child.isMesh) return;
+    child.castShadow = true;
+    child.receiveShadow = true;
+    const mats = Array.isArray(child.material) ? child.material : [child.material];
+    mats.forEach((m) => {
+      if (!m) return;
+      m.side = THREE.DoubleSide;
+      m.roughness = 0.92;
+      m.metalness = 0;
+      if (m.map) {
+        m.map.colorSpace = THREE.SRGBColorSpace;
+        m.map.anisotropy = 8;
+        m.map.needsUpdate = true;
+      }
+      m.needsUpdate = true;
     });
+  });
+  return object;
+}
 
-    // Inner navy field
-    g.fillStyle = "#1e2f4d";
-    g.fillRect(inset + 8, inset + 8, w - (inset + 8) * 2, h - (inset + 8) * 2);
+function makeCarpetFallbackPlane() {
+  const tex = new THREE.TextureLoader().load(`${CARPET_BASE}carpet.jpg`);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  tex.anisotropy = 8;
+  const carpet = addShadow(
+    new THREE.Mesh(
+      new THREE.PlaneGeometry(3.9, 2.75),
+      mat(0xffffff, { map: tex, roughness: 0.92, metalness: 0 })
+    )
+  );
+  carpet.rotation.x = -Math.PI / 2;
+  carpet.position.set(0.55, 0.015, 1.55);
+  carpet.name = "ikea-persian-carpet-fallback";
+  return carpet;
+}
 
-    // Medallion
-    const cx = w / 2;
-    const cy = h / 2;
-    g.fillStyle = "#9c2b2f";
-    g.beginPath();
-    g.ellipse(cx, cy, w * 0.18, h * 0.22, 0, 0, Math.PI * 2);
-    g.fill();
-    g.strokeStyle = "#e8d5a3";
-    g.lineWidth = 6;
-    g.stroke();
-    g.fillStyle = "#1e2f4d";
-    g.beginPath();
-    g.ellipse(cx, cy, w * 0.09, h * 0.11, 0, 0, Math.PI * 2);
-    g.fill();
-    g.fillStyle = "#e8d5a3";
-    g.beginPath();
-    g.ellipse(cx, cy, w * 0.035, h * 0.04, 0, 0, Math.PI * 2);
-    g.fill();
-
-    // Corner motifs
-    g.fillStyle = "#c4a35a";
-    [[inset + 50, inset + 50], [w - inset - 50, inset + 50], [inset + 50, h - inset - 50], [w - inset - 50, h - inset - 50]].forEach(([x, y]) => {
-      g.beginPath();
-      g.moveTo(x, y - 28);
-      g.lineTo(x + 22, y);
-      g.lineTo(x, y + 28);
-      g.lineTo(x - 22, y);
-      g.closePath();
-      g.fill();
-    });
-
-    // Floral scatter
-    g.fillStyle = "rgba(232,213,163,0.35)";
-    for (let i = 0; i < 80; i++) {
-      const x = inset + 40 + Math.random() * (w - inset * 2 - 80);
-      const y = inset + 40 + Math.random() * (h - inset * 2 - 80);
-      g.beginPath();
-      g.arc(x, y, 2 + Math.random() * 3, 0, Math.PI * 2);
-      g.fill();
-    }
-
-    // Fringe suggestion top/bottom
-    g.fillStyle = "#f4ead2";
-    for (let x = 8; x < w; x += 6) {
-      g.fillRect(x, 2, 2, 10);
-      g.fillRect(x, h - 12, 2, 10);
-    }
-  }, 1024, 768);
+function loadIKEAPersianCarpet(parent) {
+  return new Promise((resolve) => {
+    const loader = new TDSLoader();
+    loader.setResourcePath(CARPET_BASE);
+    loader.load(
+      `${CARPET_BASE}carpet.3ds`,
+      (object) => {
+        fitCarpetModel(object);
+        const wrap = new THREE.Group();
+        wrap.name = "ikea-persian-carpet";
+        wrap.add(object);
+        wrap.position.set(0.55, 0, 1.55);
+        wrap.rotation.y = Math.PI * 0.08;
+        parent.add(wrap);
+        resolve(wrap);
+      },
+      undefined,
+      (err) => {
+        console.warn("IKEA Persian carpet 3DS failed, using photo plane", err);
+        parent.add(makeCarpetFallbackPlane());
+        resolve(null);
+      }
+    );
+  });
 }
 
 function woodMat(shade = 0x4a2c1d) {
@@ -444,18 +466,7 @@ function createRoom() {
   softWin.position.set(5, 3.5, -1);
   room.add(softWin);
 
-  // Iranian carpet
-  const carpetTex = makeIranianCarpetTexture();
-  const carpet = addShadow(
-    new THREE.Mesh(
-      new THREE.PlaneGeometry(3.8, 2.7),
-      mat(0xffffff, { map: carpetTex, roughness: 0.92, metalness: 0 })
-    )
-  );
-  carpet.rotation.x = -Math.PI / 2;
-  carpet.position.set(0.55, 0.015, 1.55);
-  room.add(carpet);
-
+  // Carpet loaded async from IKEA Persian 3DS pack
   return room;
 }
 
@@ -1452,10 +1463,13 @@ window.addEventListener("resize", () => {
   renderer.setSize(window.innerWidth, window.innerHeight);
 });
 
-function init() {
-  setProgress(0.2);
-  scene.add(createRoom());
-  setProgress(0.4);
+async function init() {
+  setProgress(0.15);
+  const room = createRoom();
+  scene.add(room);
+  setProgress(0.35);
+  await loadIKEAPersianCarpet(room);
+  setProgress(0.5);
   scene.add(createBookshelfDesk());
   scene.add(createGamingChair());
   scene.add(createRack());
