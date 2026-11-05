@@ -268,7 +268,9 @@ function makeWorkMonitorTexture() {
 
 const CARPET_BASE = "/assets/models/carpet-ikea-persian/";
 
-function fitCarpetModel(object, { targetWidth = 3.9, targetDepth = 2.75, y = 0.012 } = {}) {
+const CARPET_SIZE = { width: 7.2, depth: 5.1 }; // large, room-centered
+
+function fitFlatFloorModel(object, { targetWidth, targetDepth, y = 0.012 } = {}) {
   const box = new THREE.Box3().setFromObject(object);
   const size = new THREE.Vector3();
   box.getSize(size);
@@ -326,12 +328,12 @@ function makeCarpetFallbackPlane() {
   tex.anisotropy = 8;
   const carpet = addShadow(
     new THREE.Mesh(
-      new THREE.PlaneGeometry(3.9, 2.75),
+      new THREE.PlaneGeometry(CARPET_SIZE.width, CARPET_SIZE.depth),
       mat(0xffffff, { map: tex, roughness: 0.92, metalness: 0 })
     )
   );
   carpet.rotation.x = -Math.PI / 2;
-  carpet.position.set(0.55, 0.015, 1.55);
+  carpet.position.set(0, 0.015, 0);
   carpet.name = "ikea-persian-carpet-fallback";
   return carpet;
 }
@@ -343,12 +345,16 @@ function loadIKEAPersianCarpet(parent) {
     loader.load(
       `${CARPET_BASE}carpet.3ds`,
       (object) => {
-        fitCarpetModel(object);
+        fitFlatFloorModel(object, {
+          targetWidth: CARPET_SIZE.width,
+          targetDepth: CARPET_SIZE.depth,
+        });
         const wrap = new THREE.Group();
         wrap.name = "ikea-persian-carpet";
         wrap.add(object);
-        wrap.position.set(0.55, 0, 1.55);
-        wrap.rotation.y = Math.PI * 0.08;
+        // Exact room center — no offset / no skew
+        wrap.position.set(0, 0, 0);
+        wrap.rotation.y = 0;
         parent.add(wrap);
         resolve(wrap);
       },
@@ -356,6 +362,106 @@ function loadIKEAPersianCarpet(parent) {
       (err) => {
         console.warn("IKEA Persian carpet 3DS failed, using photo plane", err);
         parent.add(makeCarpetFallbackPlane());
+        resolve(null);
+      }
+    );
+  });
+}
+
+const CHAIR_BASE = "/assets/models/armchair-okamura-atlas/";
+
+function fitChairModel(object, { targetHeight = 1.18 } = {}) {
+  object.updateMatrixWorld(true);
+  const box = new THREE.Box3().setFromObject(object);
+  const size = new THREE.Vector3();
+  box.getSize(size);
+  const center = new THREE.Vector3();
+  box.getCenter(center);
+  object.position.sub(center);
+
+  // If model is lying on its side/back, stand it up
+  if (size.y < size.x * 0.55 && size.y < size.z * 0.55) {
+    object.rotation.x = -Math.PI / 2;
+    object.updateMatrixWorld(true);
+    box.setFromObject(object);
+    box.getSize(size);
+    box.getCenter(center);
+    object.position.sub(center);
+  }
+
+  const s = targetHeight / Math.max(size.y, 0.001);
+  object.scale.setScalar(s);
+  object.updateMatrixWorld(true);
+  box.setFromObject(object);
+  box.getCenter(center);
+  object.position.x -= center.x;
+  object.position.z -= center.z;
+  object.position.y += -box.min.y;
+  return object;
+}
+
+function colorOkamuraChair(root) {
+  // Black body + red back support (seat / arms / base stay black)
+  const black = mat(0x0e0e10, { roughness: 0.62, metalness: 0.08 });
+  const red = mat(0xb91c1c, { roughness: 0.48, metalness: 0.12 });
+  const metal = mat(0x1a1a1c, { roughness: 0.35, metalness: 0.78 });
+
+  root.updateMatrixWorld(true);
+  const full = new THREE.Box3().setFromObject(root);
+  const fullSize = new THREE.Vector3();
+  full.getSize(fullSize);
+  const minY = full.min.y;
+
+  root.traverse((child) => {
+    if (!child.isMesh) return;
+    child.castShadow = true;
+    child.receiveShadow = true;
+    const b = new THREE.Box3().setFromObject(child);
+    const c = new THREE.Vector3();
+    const s = new THREE.Vector3();
+    b.getCenter(c);
+    b.getSize(s);
+    const relY = (c.y - minY) / Math.max(fullSize.y, 0.001);
+    const name = `${child.name || ""} ${child.material?.name || ""}`.toLowerCase();
+
+    const isChrome = /chrome|metal|steel/.test(name);
+    // Back support: upper cushion / tall vertical panels
+    const isBackSupport =
+      (relY > 0.45 && s.y > fullSize.y * 0.18) ||
+      (relY > 0.55 && s.y > fullSize.y * 0.1) ||
+      (/back|rest|linen/.test(name) && relY > 0.42);
+
+    let chosen = black;
+    if (isChrome && relY < 0.45) chosen = metal;
+    else if (isBackSupport) chosen = red;
+
+    child.material = chosen.clone();
+    child.material.side = THREE.DoubleSide;
+    child.material.needsUpdate = true;
+  });
+}
+
+function loadOkamuraAtlasChair(parent) {
+  return new Promise((resolve) => {
+    const loader = new TDSLoader();
+    loader.setResourcePath(CHAIR_BASE);
+    loader.load(
+      `${CHAIR_BASE}chair.3ds`,
+      (object) => {
+        fitChairModel(object, { targetHeight: 1.2 });
+        colorOkamuraChair(object);
+        const wrap = new THREE.Group();
+        wrap.name = "okamura-atlas-chair";
+        wrap.add(object);
+        // At the desk, angled toward monitors
+        wrap.position.set(0.2, 0, -0.15);
+        wrap.rotation.y = 0.4;
+        parent.add(wrap);
+        resolve(wrap);
+      },
+      undefined,
+      (err) => {
+        console.warn("Okamura Atlas chair failed to load", err);
         resolve(null);
       }
     );
@@ -720,83 +826,6 @@ function createBookshelfDesk() {
   return unit;
 }
 
-function createGamingChair() {
-  // Black mesh chair with bright red outer skeleton — matching the photo
-  const chair = new THREE.Group();
-  const black = mat(0x111111, { roughness: 0.55 });
-  const red = mat(0xc41e2a, { roughness: 0.4, metalness: 0.15 });
-  const metal = mat(0x2a2a2a, { metalness: 0.75, roughness: 0.35 });
-
-  const seat = addShadow(new THREE.Mesh(new RoundedBoxGeometry(0.52, 0.07, 0.52, 3, 0.04), black));
-  seat.position.y = 0.72;
-  chair.add(seat);
-
-  // Mesh back (dark)
-  const back = addShadow(new THREE.Mesh(new RoundedBoxGeometry(0.5, 0.72, 0.07, 3, 0.04), black));
-  back.position.set(0, 1.18, -0.23);
-  back.rotation.x = -0.08;
-  chair.add(back);
-
-  // Red outer skeleton frame
-  const frameL = addShadow(new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.78, 0.08), red));
-  frameL.position.set(-0.28, 1.18, -0.27);
-  chair.add(frameL);
-  const frameR = addShadow(new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.78, 0.08), red));
-  frameR.position.set(0.28, 1.18, -0.27);
-  chair.add(frameR);
-  const frameTop = addShadow(new THREE.Mesh(new THREE.BoxGeometry(0.62, 0.07, 0.08), red));
-  frameTop.position.set(0, 1.55, -0.27);
-  chair.add(frameTop);
-  const frameBot = addShadow(new THREE.Mesh(new THREE.BoxGeometry(0.58, 0.05, 0.08), red));
-  frameBot.position.set(0, 0.88, -0.25);
-  chair.add(frameBot);
-
-  // Headrest
-  const head = addShadow(new THREE.Mesh(new RoundedBoxGeometry(0.36, 0.16, 0.1, 2, 0.04), black));
-  head.position.set(0, 1.68, -0.2);
-  chair.add(head);
-  const headRed = addShadow(new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.04, 0.11), red));
-  headRed.position.set(0, 1.76, -0.2);
-  chair.add(headRed);
-
-  // Armrests
-  [-0.32, 0.32].forEach((x) => {
-    const arm = addShadow(new THREE.Mesh(new RoundedBoxGeometry(0.08, 0.05, 0.32, 2, 0.02), black));
-    arm.position.set(x, 0.95, -0.02);
-    chair.add(arm);
-    const post = addShadow(new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, 0.22, 8), metal));
-    post.position.set(x, 0.82, 0.05);
-    chair.add(post);
-  });
-
-  // Gas lift + five-star base with casters
-  const lift = addShadow(new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.05, 0.35, 12), metal));
-  lift.position.y = 0.5;
-  chair.add(lift);
-  const hub = addShadow(new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.1, 0.05, 16), metal));
-  hub.position.y = 0.34;
-  chair.add(hub);
-  for (let i = 0; i < 5; i++) {
-    const ang = (i / 5) * Math.PI * 2;
-    const leg = addShadow(new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.035, 0.05), metal));
-    leg.position.set(Math.cos(ang) * 0.18, 0.33, Math.sin(ang) * 0.18);
-    leg.rotation.y = -ang;
-    chair.add(leg);
-    const wheel = addShadow(new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 0.03, 12), mat(0x111)));
-    wheel.rotation.z = Math.PI / 2;
-    wheel.position.set(Math.cos(ang) * 0.38, 0.08, Math.sin(ang) * 0.38);
-    chair.add(wheel);
-  }
-
-  // Lumbar red accent stripe
-  const lumbar = addShadow(new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.25, 0.04), red));
-  lumbar.position.set(0, 1.05, -0.19);
-  chair.add(lumbar);
-
-  chair.position.set(0.15, 0, -0.25);
-  chair.rotation.y = 0.35;
-  return chair;
-}
 
 function makeCable(a, b, color = 0x2f9e44) {
   const mid = a.clone().lerp(b, 0.5);
@@ -1469,9 +1498,11 @@ async function init() {
   scene.add(room);
   setProgress(0.35);
   await loadIKEAPersianCarpet(room);
-  setProgress(0.5);
-  scene.add(createBookshelfDesk());
-  scene.add(createGamingChair());
+  setProgress(0.45);
+  const desk = createBookshelfDesk();
+  scene.add(desk);
+  await loadOkamuraAtlasChair(scene);
+  setProgress(0.6);
   scene.add(createRack());
   scene.add(createGithubFrame());
   scene.add(createAboutPlant());
