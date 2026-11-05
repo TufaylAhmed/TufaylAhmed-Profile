@@ -38,7 +38,7 @@ const CONTENT = {
       </ul>
       <div class="panel-actions">
         <button type="button" class="chip solid" data-go="console">Open console</button>
-        <button type="button" class="chip" data-go="cables">Show cables</button>
+        <button type="button" class="chip" data-go="cables">Toggle cables</button>
         <button type="button" class="chip" data-go="resume">Resume</button>
       </div>`,
   },
@@ -64,7 +64,7 @@ const state = {
   focus: null,
   animating: false,
   resumeOpen: false,
-  cablesOn: false,
+  cablesOn: true,
   activeDevice: "pa-3220",
 };
 
@@ -879,14 +879,17 @@ function buildDeviceChassis({ y, height, color, accent, title, subtitle, deviceI
       })
     );
     pLed.position.set(px - 0.01, py + 0.022, 0.328);
+    pLed.userData.portLed = linkOn ? "link" : "off";
     const actLed = new THREE.Mesh(
       new THREE.BoxGeometry(0.014, 0.01, 0.008),
-      mat(linkOn && i % 3 === 0 ? 0xffaa00 : 0x222222, {
-        emissive: linkOn && i % 3 === 0 ? 0xffaa00 : 0x000000,
-        emissiveIntensity: linkOn && i % 3 === 0 ? 1.2 : 0,
+      mat(linkOn ? 0xffaa00 : 0x222222, {
+        emissive: linkOn ? 0xffaa00 : 0x000000,
+        emissiveIntensity: linkOn ? 0.9 : 0,
       })
     );
     actLed.position.set(px + 0.01, py + 0.022, 0.328);
+    actLed.userData.portLed = linkOn ? "act" : "off";
+    actLed.userData.phase = i * 0.37;
     u.add(port, contact, pLed, actLed);
     ports.push(new THREE.Vector3(px, py, 0.34));
   }
@@ -984,13 +987,15 @@ function createRack() {
     accent: 0x88ff88,
     title: "PATCH PANEL 24P",
     subtitle: "Cat6A · Keystone",
-    deviceId: "cisco-9300",
+    deviceId: "patch-panel",
     portCount: 16,
   });
+  // Patch panel is not a console device — keep it visible but non-interactive for CLI
+  patch.userData.id = "rack";
 
   [pa, cisco, extreme, patch].forEach((d) => {
     rack.add(d);
-    interactive.push(d);
+    if (d.userData.deviceId !== "patch-panel") interactive.push(d);
     devicePorts[d.userData.deviceId] = devicePorts[d.userData.deviceId] || [];
     devicePorts[d.userData.deviceId].push(
       ...d.userData.ports.map((p) => p.clone().add(new THREE.Vector3(0, d.position.y, 0)))
@@ -1011,8 +1016,9 @@ function createRack() {
   const links = [
     ["pa-3220", "cisco-9300", 0xff5a1f],
     ["cisco-9300", "extreme-vsp", 0x1ba0d7],
-    ["extreme-vsp", "cisco-9300", 0x9b4dca],
-    ["pa-3220", "extreme-vsp", 0xffaa44],
+    ["extreme-vsp", "patch-panel", 0x9b4dca],
+    ["cisco-9300", "patch-panel", 0xffaa44],
+    ["pa-3220", "extreme-vsp", 0x44ccff],
   ];
   links.forEach(([aId, bId, color], idx) => {
     const aPorts = devicePorts[aId];
@@ -1246,7 +1252,7 @@ async function focusObject(id, deviceId) {
       const camPos = focus.clone().add(new THREE.Vector3(1.7, 0.45, 1.35));
       await animateCamera(camPos, focus, 0.95);
     }
-    toggleCables(true);
+    toggleCables();
     openPanel("rack");
     return;
   }
@@ -1468,8 +1474,15 @@ function init() {
     }
     const rack = interactive.find((o) => o.userData.id === "rack");
     if (rack) {
-      const rl = rack.children.find((c) => c.isLight);
-      if (rl) rl.intensity = 3.2 + Math.sin(t * 3) * 0.7;
+      rack.traverse((c) => {
+        if (!c.userData?.portLed || c.userData.portLed === "off") return;
+        if (c.userData.portLed === "act") {
+          const pulse = 0.35 + Math.abs(Math.sin(t * 9 + (c.userData.phase || 0)));
+          c.material.emissiveIntensity = pulse * 1.6;
+        } else if (c.userData.portLed === "link") {
+          c.material.emissiveIntensity = 1.2 + Math.sin(t * 2.4) * 0.25;
+        }
+      });
     }
     controls.update();
     updateHotspots();
