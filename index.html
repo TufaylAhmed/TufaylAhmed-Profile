@@ -3,305 +3,100 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Tufail Ahmed Sheikh — SASE &amp; Network Delivery Leader</title>
-  <meta name="description" content="SASE, Zero Trust, and network delivery leadership. Palo Alto Prisma Access, XSOAR, Strata Cloud Manager, Extreme Networks, Cisco, Ruckus." />
-  <meta name="theme-color" content="#070b14" />
-  <meta property="og:title" content="Tufail Ahmed Sheikh — SASE & Network Delivery Leader" />
-  <meta property="og:description" content="Professional profile — SASE programmes, Palo Alto platforms, and global network delivery." />
-  <meta property="og:url" content="https://tufaylahmed.com/" />
-  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%23070b14'/%3E%3Ctext x='50%25' y='54%25' text-anchor='middle' font-family='SF Pro Display,Helvetica,sans-serif' font-size='26' font-weight='600' fill='%23c9d7ff'%3ETA%3C/text%3E%3C/svg%3E" />
+  <title>Tufail Ahmed Sheikh — Interactive Office</title>
+  <meta name="description" content="Explore my office in 3D. SASE, Palo Alto, network delivery. Pick up my resume from the desk." />
+  <meta name="theme-color" content="#1a1f1c" />
   <link rel="stylesheet" href="/assets/styles.css" />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%231a1f1c'/%3E%3Ctext x='50%25' y='54%25' text-anchor='middle' font-family='system-ui' font-size='26' font-weight='700' fill='%23e8dcc8'%3ETA%3C/text%3E%3C/svg%3E" />
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://unpkg.com/three@0.170.0/build/three.module.js",
+      "three/addons/": "https://unpkg.com/three@0.170.0/examples/jsm/"
+    }
+  }
+  </script>
 </head>
 <body>
-  <div class="stage" aria-hidden="true">
-    <canvas id="net-canvas"></canvas>
-    <div class="stage-wash"></div>
-    <div class="stage-noise"></div>
-  </div>
+  <div id="app">
+    <canvas id="c"></canvas>
 
-  <header class="nav glass-bar">
-    <a class="brand" href="#top">
-      <span class="brand-mark">TA</span>
-      <span>Tufail Ahmed Sheikh</span>
-    </a>
-    <nav class="nav-links">
-      <a href="#platforms">Platforms</a>
-      <a href="#experience">Experience</a>
-      <a href="#skills">Skills</a>
-      <a href="https://github.com/TufaylAhmed" target="_blank" rel="noopener">GitHub</a>
-      <a href="#contact">Contact</a>
-    </nav>
-    <button class="btn btn-primary" type="button" data-open-resume>Download resume</button>
-  </header>
-
-  <main id="top">
-    <section class="hero">
-      <div class="hero-copy">
-        <p class="eyebrow reveal">
-          <span class="pulse-dot"></span>
-          Network · SASE · Delivery
-        </p>
-        <h1 class="reveal delay-1">
-          <span class="line">Architecting</span>
-          <span class="line accent-line">secure networks</span>
-          <span class="line">that ship.</span>
-        </h1>
-        <p class="lede reveal delay-2">
-          Tufail Ahmed Sheikh — engineering leader for SASE, Zero Trust, and network delivery.
-          Hands-on with Palo Alto Prisma Access, XSOAR, and Strata Cloud Manager; previously Head of Network Operations &amp; SASE Product (India) at Extreme Networks.
-        </p>
-        <div class="hero-actions reveal delay-3">
-          <button class="btn btn-primary btn-lg" type="button" data-open-resume>Download resume</button>
-          <a class="btn btn-ghost btn-lg" href="https://github.com/TufaylAhmed" target="_blank" rel="noopener">
-            <img class="btn-ico" src="/assets/logos/github.svg" alt="" />
-            GitHub
-          </a>
-          <a class="btn btn-ghost btn-lg" href="mailto:tufayl@outlook.com">Email</a>
-        </div>
+    <div id="loader">
+      <div class="loader-card">
+        <img src="/assets/textures/office.jpg" alt="" class="loader-photo" />
+        <p class="loader-kicker">Tufail Ahmed Sheikh</p>
+        <h1>Entering the office…</h1>
+        <div class="bar"><i id="loader-bar"></i></div>
       </div>
+    </div>
 
-      <aside class="hero-card glass reveal delay-3" data-tilt>
-        <div class="hero-card-top">
-          <span class="live-pill"><i></i> Open to leadership roles</span>
-          <strong>12+ yrs</strong>
-        </div>
-        <h2>Delivery snapshot</h2>
-        <div class="stat-grid">
-          <div><em data-count="7">0</em><span>Years leading India networking</span></div>
-          <div><em data-count="4">0</em><span>Palo Alto platforms in production</span></div>
-          <div><em data-count="3">0</em><span>Regions — US · EMEA · APAC</span></div>
-        </div>
-        <div class="hero-card-logos">
-          <img src="/assets/logos/prisma.svg" alt="Prisma Access" />
-          <img src="/assets/logos/xsoar.svg" alt="Cortex XSOAR" />
-          <img src="/assets/logos/extreme.svg" alt="Extreme Networks" />
-        </div>
-      </aside>
-    </section>
-
-    <section class="logo-rail" id="platforms" aria-label="Platforms and employers">
-      <div class="logo-rail-head reveal">
-        <h2>Platforms &amp; organizations</h2>
-        <p>Production experience across SASE, campus, and enterprise networking.</p>
+    <header class="topbar">
+      <div class="brand">
+        <strong>Tufail Ahmed Sheikh</strong>
+        <span>SASE · Network Delivery · Palo Alto</span>
       </div>
-      <div class="marquee" data-marquee>
-        <div class="marquee-track">
-          <div class="marquee-group">
-            <figure class="logo-chip glass"><img src="/assets/logos/paloalto.svg" alt="" /><figcaption>Palo Alto Networks</figcaption></figure>
-            <figure class="logo-chip glass"><img src="/assets/logos/prisma.svg" alt="" /><figcaption>Prisma Access</figcaption></figure>
-            <figure class="logo-chip glass"><img src="/assets/logos/xsoar.svg" alt="" /><figcaption>Cortex XSOAR</figcaption></figure>
-            <figure class="logo-chip glass"><img src="/assets/logos/strata.svg" alt="" /><figcaption>Strata Cloud Manager</figcaption></figure>
-            <figure class="logo-chip glass"><img src="/assets/logos/extreme.svg" alt="" /><figcaption>Extreme Networks</figcaption></figure>
-            <figure class="logo-chip glass"><img src="/assets/logos/cisco-word.svg" alt="" /><figcaption>Cisco</figcaption></figure>
-            <figure class="logo-chip glass"><img src="/assets/logos/ruckus.svg" alt="" /><figcaption>Ruckus</figcaption></figure>
-            <figure class="logo-chip glass"><img src="/assets/logos/ahead.svg" alt="" /><figcaption>AHEAD</figcaption></figure>
-            <figure class="logo-chip glass"><img src="/assets/logos/ford.svg" alt="" /><figcaption>Ford</figcaption></figure>
+      <div class="top-actions">
+        <button type="button" id="btn-reset" class="chip">Reset view</button>
+        <a class="chip" href="https://github.com/TufaylAhmed" target="_blank" rel="noopener">GitHub</a>
+      </div>
+    </header>
+
+    <div id="hint" class="hint">Drag to look around · Click glowing objects to explore</div>
+
+    <div id="hotspots"></div>
+
+    <aside id="panel" class="panel" hidden>
+      <button type="button" class="panel-close" id="panel-close" aria-label="Close">×</button>
+      <div id="panel-body"></div>
+    </aside>
+
+    <div id="resume-sheet" class="resume-sheet" hidden>
+      <div class="resume-frame">
+        <div class="resume-toolbar">
+          <div>
+            <strong>Resume</strong>
+            <span>Pick it up from the desk anytime</span>
           </div>
-          <div class="marquee-group" aria-hidden="true">
-            <figure class="logo-chip glass"><img src="/assets/logos/paloalto.svg" alt="" /><figcaption>Palo Alto Networks</figcaption></figure>
-            <figure class="logo-chip glass"><img src="/assets/logos/prisma.svg" alt="" /><figcaption>Prisma Access</figcaption></figure>
-            <figure class="logo-chip glass"><img src="/assets/logos/xsoar.svg" alt="" /><figcaption>Cortex XSOAR</figcaption></figure>
-            <figure class="logo-chip glass"><img src="/assets/logos/strata.svg" alt="" /><figcaption>Strata Cloud Manager</figcaption></figure>
-            <figure class="logo-chip glass"><img src="/assets/logos/extreme.svg" alt="" /><figcaption>Extreme Networks</figcaption></figure>
-            <figure class="logo-chip glass"><img src="/assets/logos/cisco-word.svg" alt="" /><figcaption>Cisco</figcaption></figure>
-            <figure class="logo-chip glass"><img src="/assets/logos/ruckus.svg" alt="" /><figcaption>Ruckus</figcaption></figure>
-            <figure class="logo-chip glass"><img src="/assets/logos/ahead.svg" alt="" /><figcaption>AHEAD</figcaption></figure>
-            <figure class="logo-chip glass"><img src="/assets/logos/ford.svg" alt="" /><figcaption>Ford</figcaption></figure>
+          <div class="resume-actions">
+            <button type="button" class="chip solid" id="btn-download">Download PDF</button>
+            <button type="button" class="chip" id="resume-close">Put back</button>
           </div>
         </div>
+        <iframe id="resume-frame" title="Resume preview" src="about:blank"></iframe>
       </div>
-    </section>
+    </div>
 
-    <section class="panel glass reveal" id="about">
-      <div class="panel-grid">
-        <div>
-          <h2>About</h2>
-          <p>
-            Player-coach with 12+ years in network software and operations. I build secure access
-            architectures, lead delivery programmes, and set technical direction for telemetry and
-            API platforms consumed by operators, customers, and AI agents.
-          </p>
-          <p>
-            At Ford Blue Oval Michigan I lead network platform work on the Palo Alto stack —
-            Prisma Access, IoT Security, XSOAR, and Strata Cloud Manager — with identity-centric
-            access, multi-source telemetry, and cross-timezone delivery.
-          </p>
-        </div>
-        <div class="about-stack">
-          <div class="mini-card">
-            <img src="/assets/logos/prisma.svg" alt="Prisma Access" />
-            <div>
-              <strong>Prisma Access</strong>
-              <span>SASE / ZTNA delivery</span>
-            </div>
-          </div>
-          <div class="mini-card">
-            <img src="/assets/logos/xsoar.svg" alt="XSOAR" />
-            <div>
-              <strong>Cortex XSOAR</strong>
-              <span>Automation &amp; response</span>
-            </div>
-          </div>
-          <div class="mini-card">
-            <img src="/assets/logos/strata.svg" alt="Strata Cloud Manager" />
-            <div>
-              <strong>Strata Cloud Manager</strong>
-              <span>Policy &amp; operations</span>
-            </div>
-          </div>
-          <div class="mini-card">
-            <img src="/assets/logos/extreme.svg" alt="Extreme Networks" />
-            <div>
-              <strong>Extreme Networks</strong>
-              <span>SASE product · India leadership</span>
-            </div>
-          </div>
-        </div>
+    <div id="download-modal" class="modal" hidden>
+      <div class="modal-backdrop" data-close-dl></div>
+      <div class="modal-card">
+        <button type="button" class="panel-close" data-close-dl aria-label="Close">×</button>
+        <h2>Download resume</h2>
+        <p>Enter your work email and the PDF will download.</p>
+        <form id="dl-form">
+          <label>Work email
+            <input type="email" name="email" required placeholder="you@company.com" autocomplete="email" />
+          </label>
+          <label>Name <em>(optional)</em>
+            <input type="text" name="name" placeholder="Your name" />
+          </label>
+          <label>Company <em>(optional)</em>
+            <input type="text" name="company" placeholder="Company" />
+          </label>
+          <button class="chip solid wide" type="submit" id="dl-submit">Download PDF</button>
+          <p class="form-status" id="dl-status" role="status"></p>
+        </form>
       </div>
-    </section>
+    </div>
 
-    <section class="section" id="experience">
-      <div class="section-head reveal">
-        <h2>Experience</h2>
-        <p>From SASE product leadership to multi-vendor network delivery.</p>
+    <div id="mobile-note" class="mobile-note" hidden>
+      <p>This 3D office is best on desktop. You can still browse a simplified view or download the resume.</p>
+      <div class="mobile-actions">
+        <button type="button" class="chip solid" id="mobile-continue">Continue anyway</button>
+        <button type="button" class="chip" id="mobile-resume">Get resume</button>
       </div>
-
-      <article class="role glass reveal" data-tilt>
-        <div class="role-brand">
-          <img src="/assets/logos/ahead.svg" alt="" />
-          <img src="/assets/logos/ford.svg" alt="" />
-          <img src="/assets/logos/paloalto.svg" alt="" />
-        </div>
-        <div class="role-meta">
-          <h3>Principal Architect — Network Platforms &amp; Observability</h3>
-          <span>Remote · Dec 2024 – Present</span>
-        </div>
-        <p class="role-org">AHEAD · Ford Motor Company, Blue Oval Michigan · Palo Alto Networks</p>
-        <ul>
-          <li>Lead SASE / Zero Trust network delivery — roadmaps, estimation, risk mitigation, release sequencing, and executive KPI reporting.</li>
-          <li>Architect and deploy Prisma Access, IoT Security, Cortex XSOAR, and Strata Cloud Manager across cloud, network, and security operations.</li>
-          <li>Design identity-centric access and policy APIs; integrate inventory, IoT/OT visibility, streaming events, and syslog into operational views.</li>
-          <li>Partner with platform, SRE, and Ops on SLOs, runbooks, incident/RCA cycles, and AI-assisted triage.</li>
-        </ul>
-      </article>
-
-      <article class="role glass reveal" data-tilt>
-        <div class="role-brand">
-          <img src="/assets/logos/extreme.svg" alt="Extreme Networks" />
-        </div>
-        <div class="role-meta">
-          <h3>Head of Network Operations / SASE Product Head (India)</h3>
-          <span>Extreme Networks · Jul 2017 – Dec 2024</span>
-        </div>
-        <ul>
-          <li>Built and led the India networking organisation — hiring, coaching, performance management, and a tech-lead pipeline.</li>
-          <li>Owned SASE and network platform programme delivery across Asia with US and EMEA partners.</li>
-          <li>Defined Universal ZTNA / SASE reference architecture and the VPN-to-Zero Trust transition path.</li>
-          <li>Directed ExtremeAnalytics, ExtremeControl / Site Engine, fabric topology, and ExtremeCloud IQ API platforms.</li>
-        </ul>
-      </article>
-
-      <div class="role-row">
-        <article class="role glass reveal compact" data-tilt>
-          <div class="role-brand"><img src="/assets/logos/ruckus.svg" alt="Ruckus" /></div>
-          <div class="role-meta">
-            <h3>Network Engineer</h3>
-            <span>Ruckus · 2016 – 2017</span>
-          </div>
-          <p>Enterprise wireless design, monitoring telemetry, and production handover.</p>
-        </article>
-        <article class="role glass reveal compact" data-tilt>
-          <div class="role-brand"><img src="/assets/logos/cisco-word.svg" alt="Cisco" /></div>
-          <div class="role-meta">
-            <h3>IT Analyst Engineer</h3>
-            <span>Cisco · 2014 – 2015</span>
-          </div>
-          <p>Enterprise network and collaboration platforms, runbooks, and production change.</p>
-        </article>
-      </div>
-    </section>
-
-    <section class="section" id="skills">
-      <div class="section-head reveal">
-        <h2>Core skills</h2>
-        <p>Where architecture, delivery, and platforms meet.</p>
-      </div>
-      <div class="skills-grid">
-        <div class="skill glass reveal" data-tilt>
-          <h3>SASE &amp; Zero Trust</h3>
-          <p>SASE programmes, Universal ZTNA, identity-centric access, micro-segmentation, SD-WAN, VPN-to-ZTNA roadmaps.</p>
-        </div>
-        <div class="skill glass reveal" data-tilt>
-          <h3>Palo Alto Networks</h3>
-          <p>Prisma Access, IoT Security, Cortex XSOAR, Strata Cloud Manager — architecture through production delivery.</p>
-        </div>
-        <div class="skill glass reveal" data-tilt>
-          <h3>Network delivery</h3>
-          <p>Programme ownership: planning, estimation, release management, risk escalation, KPI reporting, global stakeholders.</p>
-        </div>
-        <div class="skill glass reveal" data-tilt>
-          <h3>Network &amp; telemetry</h3>
-          <p>BGP, OSPF, MPLS, VLANs, SNMP, streaming telemetry/gNMI, NetFlow/IPFIX, syslog, inventory &amp; topology.</p>
-        </div>
-        <div class="skill glass reveal" data-tilt>
-          <h3>Observability &amp; APIs</h3>
-          <p>Kafka, Prometheus, OpenTelemetry, Grafana, Loki · Python/Java · REST/gRPC/GraphQL · SLOs &amp; RCA.</p>
-        </div>
-        <div class="skill glass reveal" data-tilt>
-          <h3>Leadership &amp; AI-native</h3>
-          <p>India team build-out · LLM tool calling, MCP, RAG, agent-ready network APIs.</p>
-        </div>
-      </div>
-    </section>
-
-    <section class="cta-band glass reveal" id="contact">
-      <div class="cta-glow" aria-hidden="true"></div>
-      <h2>For recruiters</h2>
-      <p>Enter your work email to download the full PDF. Explore code and experiments on GitHub.</p>
-      <div class="hero-actions" style="justify-content:center;margin-top:0">
-        <button class="btn btn-primary btn-lg" type="button" data-open-resume>Get the resume</button>
-        <a class="btn btn-ghost btn-lg" href="https://github.com/TufaylAhmed" target="_blank" rel="noopener">github.com/TufaylAhmed</a>
-      </div>
-      <div class="contact-row">
-        <a href="mailto:tufayl@outlook.com">tufayl@outlook.com</a>
-        <a href="tel:+919686633999">+91 968-66-33-999</a>
-        <a href="https://linkedin.tufailahmedsheikh.com/" target="_blank" rel="noopener">LinkedIn</a>
-        <a href="https://github.com/TufaylAhmed" target="_blank" rel="noopener">GitHub</a>
-      </div>
-    </section>
-  </main>
-
-  <footer class="footer">
-    <span>© <span id="year"></span> Tufail Ahmed Sheikh</span>
-    <a href="https://github.com/TufaylAhmed/TufaylAhmed-Profile" target="_blank" rel="noopener">Source on GitHub</a>
-  </footer>
-
-  <div class="modal" id="resume-modal" hidden>
-    <div class="modal-backdrop" data-close-resume></div>
-    <div class="modal-panel glass" role="dialog" aria-modal="true" aria-labelledby="resume-title">
-      <button class="modal-close" type="button" aria-label="Close" data-close-resume>×</button>
-      <h2 id="resume-title">Download resume</h2>
-      <p>Share your email and the PDF will download right away.</p>
-      <form id="resume-form" novalidate>
-        <label class="field">
-          <span>Work email</span>
-          <input type="email" name="email" required placeholder="you@company.com" autocomplete="email" />
-        </label>
-        <label class="field">
-          <span>Name <em>(optional)</em></span>
-          <input type="text" name="name" placeholder="Your name" autocomplete="name" />
-        </label>
-        <label class="field">
-          <span>Company <em>(optional)</em></span>
-          <input type="text" name="company" placeholder="Company" autocomplete="organization" />
-        </label>
-        <p class="form-note">By continuing you agree that your email may be stored so I know who downloaded the resume.</p>
-        <button class="btn btn-primary btn-lg btn-block" type="submit" id="resume-submit">Download PDF</button>
-        <p class="form-status" id="resume-status" role="status" aria-live="polite"></p>
-      </form>
     </div>
   </div>
 
-  <script src="/assets/app.js" defer></script>
+  <script type="module" src="/assets/office.js"></script>
 </body>
 </html>

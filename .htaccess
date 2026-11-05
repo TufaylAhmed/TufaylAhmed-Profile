@@ -1,2 +1,4 @@
 Options -Indexes
 DirectoryIndex index.html index.php
+AddType text/javascript .js
+AddType application/wasm .wasm
