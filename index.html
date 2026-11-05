@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Tufail Ahmed Sheikh — Interactive Office</title>
-  <meta name="description" content="Explore my office in 3D. SASE, Palo Alto, network delivery. Pick up my resume from the desk." />
+  <meta name="description" content="Explore my office in 3D. SASE, Palo Alto, network delivery. Open the resume on my desk and download it." />
   <meta name="theme-color" content="#1a1f1c" />
   <link rel="stylesheet" href="/assets/styles.css" />
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%231a1f1c'/%3E%3Ctext x='50%25' y='54%25' text-anchor='middle' font-family='system-ui' font-size='26' font-weight='700' fill='%23e8dcc8'%3ETA%3C/text%3E%3C/svg%3E" />
@@ -23,7 +23,6 @@
 
     <div id="loader">
       <div class="loader-card">
-        <img src="/assets/textures/office.jpg" alt="" class="loader-photo" />
         <p class="loader-kicker">Tufail Ahmed Sheikh</p>
         <h1>Entering the office…</h1>
         <div class="bar"><i id="loader-bar"></i></div>
@@ -35,13 +34,17 @@
         <strong>Tufail Ahmed Sheikh</strong>
         <span>SASE · Network Delivery · Palo Alto</span>
       </div>
-      <div class="top-actions">
-        <button type="button" id="btn-reset" class="chip">Reset view</button>
-        <a class="chip" href="https://github.com/TufaylAhmed" target="_blank" rel="noopener">GitHub</a>
-      </div>
+      <nav class="menu" aria-label="Office menu">
+        <button type="button" class="chip solid" data-menu="resume">Resume</button>
+        <button type="button" class="chip" data-menu="download">Download</button>
+        <button type="button" class="chip" data-menu="rack">Rack</button>
+        <button type="button" class="chip" data-menu="about">About</button>
+        <button type="button" class="chip" data-menu="github">GitHub</button>
+        <button type="button" class="chip" id="btn-reset">Reset view</button>
+      </nav>
     </header>
 
-    <div id="hint" class="hint">Drag to look around · Click glowing objects to explore</div>
+    <div id="hint" class="hint">Use the menu or click glowing objects · Drag to look around</div>
 
     <div id="hotspots"></div>
 
@@ -55,11 +58,11 @@
         <div class="resume-toolbar">
           <div>
             <strong>Resume</strong>
-            <span>Pick it up from the desk anytime</span>
+            <span>Also shown on the desk monitor</span>
           </div>
           <div class="resume-actions">
             <button type="button" class="chip solid" id="btn-download">Download PDF</button>
-            <button type="button" class="chip" id="resume-close">Put back</button>
+            <button type="button" class="chip" id="resume-close">Close</button>
           </div>
         </div>
         <iframe id="resume-frame" title="Resume preview" src="about:blank"></iframe>
@@ -89,10 +92,11 @@
     </div>
 
     <div id="mobile-note" class="mobile-note" hidden>
-      <p>This 3D office is best on desktop. You can still browse a simplified view or download the resume.</p>
+      <p>This 3D office is best on desktop. You can still open the resume or download it.</p>
       <div class="mobile-actions">
         <button type="button" class="chip solid" id="mobile-continue">Continue anyway</button>
-        <button type="button" class="chip" id="mobile-resume">Get resume</button>
+        <button type="button" class="chip" id="mobile-resume">Resume</button>
+        <button type="button" class="chip" data-close-mobile-dl id="mobile-download">Download</button>
       </div>
     </div>
   </div>

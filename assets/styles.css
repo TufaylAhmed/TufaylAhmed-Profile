@@ -92,8 +92,9 @@ a { color: inherit; text-decoration: none; }
   z-index: 12;
   display: flex;
   justify-content: space-between;
+  align-items: flex-start;
   gap: 16px;
-  padding: 18px 22px;
+  padding: 16px 18px;
   pointer-events: none;
 }
 .topbar > * { pointer-events: auto; }
@@ -107,7 +108,16 @@ a { color: inherit; text-decoration: none; }
   color: var(--muted);
   font-size: .82rem;
 }
-.top-actions { display: flex; gap: 8px; align-items: flex-start; }
+.menu {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+  max-width: min(640px, 72vw);
+}
+.loader-card {
+  width: min(92vw, 380px);
+}
 
 .chip {
   border: 1px solid var(--line);
