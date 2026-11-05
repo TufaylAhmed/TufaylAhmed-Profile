@@ -59,6 +59,14 @@ const CONTENT = {
         <a class="chip solid" href="https://github.com/TufaylAhmed" target="_blank" rel="noopener">github.com/TufaylAhmed</a>
       </div>`,
   },
+  chair: {
+    title: "Okamura Atlas",
+    html: `
+      <p>Black mesh task chair with a red back profile. Click the chair to roll it, or click the floor to park it.</p>
+      <div class="panel-actions">
+        <button type="button" class="chip solid" data-go="chair-roll">Roll chair</button>
+      </div>`,
+  },
 };
 
 const state = {
@@ -67,6 +75,7 @@ const state = {
   resumeOpen: false,
   cablesOn: true,
   activeDevice: "pa-3220",
+  chairMoveMode: false,
 };
 
 const DEVICES = {
@@ -131,6 +140,17 @@ const DEVICES = {
 let rackRef = null;
 let cableGroup = null;
 let devicePorts = {}; // id -> { left, right } world-local positions on rack
+let chairRef = null;
+let floorMesh = null;
+const chairSpots = [
+  { pos: new THREE.Vector3(0.25, 0, -0.2), yaw: 0.35 },
+  { pos: new THREE.Vector3(1.35, 0, 0.55), yaw: -0.55 },
+  { pos: new THREE.Vector3(-0.95, 0, 0.85), yaw: 0.9 },
+  { pos: new THREE.Vector3(0.85, 0, 1.55), yaw: Math.PI + 0.2 },
+  { pos: new THREE.Vector3(-0.35, 0, 1.75), yaw: Math.PI - 0.4 },
+  { pos: new THREE.Vector3(1.6, 0, -0.55), yaw: -1.1 },
+];
+let chairSpotIndex = 0;
 
 const renderer = new THREE.WebGLRenderer({
   canvas,
@@ -372,46 +392,93 @@ const CHAIR_BASE = "/assets/models/armchair-okamura-atlas/";
 
 function fitChairModel(object, { targetHeight = 1.18 } = {}) {
   object.updateMatrixWorld(true);
-  const box = new THREE.Box3().setFromObject(object);
-  const size = new THREE.Vector3();
+  let box = new THREE.Box3().setFromObject(object);
+  let size = new THREE.Vector3();
   box.getSize(size);
-  const center = new THREE.Vector3();
+  let center = new THREE.Vector3();
   box.getCenter(center);
   object.position.sub(center);
 
-  // If model is lying on its side/back, stand it up
-  if (size.y < size.x * 0.55 && size.y < size.z * 0.55) {
+  // Archibase Okamura Atlas is authored Z-up — map to Three.js Y-up
+  if (size.z >= size.y * 0.9) {
     object.rotation.x = -Math.PI / 2;
-    object.updateMatrixWorld(true);
-    box.setFromObject(object);
-    box.getSize(size);
-    box.getCenter(center);
-    object.position.sub(center);
+  } else if (size.x >= size.y * 0.9 && size.x >= size.z * 0.9) {
+    object.rotation.z = Math.PI / 2;
   }
+  object.updateMatrixWorld(true);
+  box = new THREE.Box3().setFromObject(object);
+  box.getSize(size);
+  box.getCenter(center);
+  object.position.sub(center);
 
   const s = targetHeight / Math.max(size.y, 0.001);
   object.scale.setScalar(s);
   object.updateMatrixWorld(true);
-  box.setFromObject(object);
+  box = new THREE.Box3().setFromObject(object);
+  box.getSize(size);
   box.getCenter(center);
   object.position.x -= center.x;
   object.position.z -= center.z;
   object.position.y += -box.min.y;
+
+  // Face local -Z toward the desk: back = highest cluster of upper meshes
+  const seat = new THREE.Vector3();
+  const back = new THREE.Vector3();
+  let seatN = 0;
+  let backN = 0;
+  const minY = box.min.y;
+  const h = Math.max(size.y, 0.001);
+  object.traverse((child) => {
+    if (!child.isMesh) return;
+    const b = new THREE.Box3().setFromObject(child);
+    const c = new THREE.Vector3();
+    b.getCenter(c);
+    const relY = (c.y - minY) / h;
+    const count = child.geometry?.attributes?.position?.count || 0;
+    if (relY < 0.35 && count > 4000) {
+      seat.add(c);
+      seatN++;
+    } else if (relY > 0.55) {
+      back.add(c);
+      backN++;
+    }
+  });
+  if (seatN && backN) {
+    seat.multiplyScalar(1 / seatN);
+    back.multiplyScalar(1 / backN);
+    const dir = new THREE.Vector3(back.x - seat.x, 0, back.z - seat.z);
+    if (dir.lengthSq() > 1e-6) {
+      dir.normalize();
+      // Want back to sit at local +Z so seat faces local -Z (desk)
+      const yaw = Math.atan2(dir.x, dir.z);
+      object.rotation.y -= yaw;
+      object.updateMatrixWorld(true);
+      box = new THREE.Box3().setFromObject(object);
+      box.getCenter(center);
+      object.position.x -= center.x;
+      object.position.z -= center.z;
+      object.position.y = 0;
+      box = new THREE.Box3().setFromObject(object);
+      object.position.y = -box.min.y;
+    }
+  }
   return object;
 }
 
 function colorOkamuraChair(root) {
-  // Black body + red back support (seat / arms / base stay black)
-  const black = mat(0x0e0e10, { roughness: 0.62, metalness: 0.08 });
-  const red = mat(0xb91c1c, { roughness: 0.48, metalness: 0.12 });
-  const metal = mat(0x1a1a1c, { roughness: 0.35, metalness: 0.78 });
+  // Mesh / seat / arms / base = black. Only the back outer profile/frame = red.
+  const black = mat(0x0c0c0e, { roughness: 0.68, metalness: 0.06 });
+  const red = mat(0xb91c1c, { roughness: 0.45, metalness: 0.14 });
+  const metal = mat(0x17171a, { roughness: 0.32, metalness: 0.82 });
 
   root.updateMatrixWorld(true);
   const full = new THREE.Box3().setFromObject(root);
   const fullSize = new THREE.Vector3();
   full.getSize(fullSize);
   const minY = full.min.y;
+  const midZ = (full.min.z + full.max.z) * 0.5;
 
+  const infos = [];
   root.traverse((child) => {
     if (!child.isMesh) return;
     child.castShadow = true;
@@ -421,24 +488,108 @@ function colorOkamuraChair(root) {
     const s = new THREE.Vector3();
     b.getCenter(c);
     b.getSize(s);
-    const relY = (c.y - minY) / Math.max(fullSize.y, 0.001);
-    const name = `${child.name || ""} ${child.material?.name || ""}`.toLowerCase();
+    const count = child.geometry?.attributes?.position?.count || 0;
+    infos.push({
+      child,
+      count,
+      relY: (c.y - minY) / Math.max(fullSize.y, 0.001),
+      center: c,
+      size: s,
+      name: `${child.name || ""} ${child.material?.name || ""}`.toLowerCase(),
+    });
+  });
 
+  // Densest parts are the fabric mesh — never red
+  const byCount = [...infos].sort((a, b) => b.count - a.count);
+  const meshFabric = new Set(byCount.slice(0, 4).map((i) => i.child));
+
+  infos.forEach((info) => {
+    const { child, count, relY, center, size, name } = info;
     const isChrome = /chrome|metal|steel/.test(name);
-    // Back support: upper cushion / tall vertical panels
-    const isBackSupport =
-      (relY > 0.45 && s.y > fullSize.y * 0.18) ||
-      (relY > 0.55 && s.y > fullSize.y * 0.1) ||
-      (/back|rest|linen/.test(name) && relY > 0.42);
+    const isFabric =
+      meshFabric.has(child) || count >= 5000 || /linen|mesh|fabric/.test(name);
+
+    // Back profile = low/mid-poly shell sitting on the rear half, above the seat
+    const towardBack = center.z >= midZ - fullSize.z * 0.05;
+    const thinShell = Math.min(size.x, size.z) < fullSize.x * 0.55;
+    const isBackProfile =
+      !isFabric &&
+      relY > 0.42 &&
+      count < 4500 &&
+      towardBack &&
+      (thinShell || relY > 0.58);
 
     let chosen = black;
-    if (isChrome && relY < 0.45) chosen = metal;
-    else if (isBackSupport) chosen = red;
+    if (isBackProfile) chosen = red;
+    else if (isChrome && relY < 0.4) chosen = metal;
 
     child.material = chosen.clone();
     child.material.side = THREE.DoubleSide;
     child.material.needsUpdate = true;
   });
+}
+
+function animateChairTo(pos, yaw, duration = 1.15) {
+  if (!chairRef) return Promise.resolve();
+  return new Promise((resolve) => {
+    state.animating = true;
+    const from = chairRef.position.clone();
+    const fromYaw = chairRef.rotation.y;
+    const start = performance.now();
+    const spin = Math.atan2(pos.x - from.x, pos.z - from.z);
+    const tick = (now) => {
+      const t = Math.min(1, (now - start) / (duration * 1000));
+      const e = easeInOut(t);
+      chairRef.position.lerpVectors(from, pos, e);
+      // Roll: ease toward travel heading mid-way, then settle to target yaw
+      const travelBlend = Math.sin(Math.PI * e);
+      const midYaw = THREE.MathUtils.lerp(fromYaw, spin, 0.65);
+      chairRef.rotation.y = THREE.MathUtils.lerp(fromYaw, midYaw, travelBlend);
+      chairRef.rotation.y = THREE.MathUtils.lerp(chairRef.rotation.y, yaw, e * e);
+      // Subtle caster bounce
+      chairRef.position.y = Math.abs(Math.sin(e * Math.PI)) * 0.02;
+      if (t < 1) requestAnimationFrame(tick);
+      else {
+        chairRef.position.copy(pos);
+        chairRef.position.y = 0;
+        chairRef.rotation.y = yaw;
+        state.animating = false;
+        resolve();
+      }
+    };
+    requestAnimationFrame(tick);
+  });
+}
+
+async function rollChairNext() {
+  if (!chairRef || state.animating) return;
+  chairSpotIndex = (chairSpotIndex + 1) % chairSpots.length;
+  const spot = chairSpots[chairSpotIndex];
+  hintEl.textContent = "Chair rolling — click again to move, or click the floor to place";
+  hintEl.classList.remove("hide");
+  state.chairMoveMode = true;
+  await animateChairTo(spot.pos.clone(), spot.yaw);
+}
+
+async function placeChairOnFloor(clientX, clientY) {
+  if (!chairRef || !floorMesh || state.animating) return false;
+  const rect = canvas.getBoundingClientRect();
+  pointer.x = ((clientX - rect.left) / rect.width) * 2 - 1;
+  pointer.y = -((clientY - rect.top) / rect.height) * 2 + 1;
+  raycaster.setFromCamera(pointer, camera);
+  const hits = raycaster.intersectObject(floorMesh, false);
+  if (!hits.length) return false;
+  const p = hits[0].point.clone();
+  p.y = 0;
+  // Keep on the rug / room bounds
+  p.x = THREE.MathUtils.clamp(p.x, -3.2, 3.2);
+  p.z = THREE.MathUtils.clamp(p.z, -2.8, 3.2);
+  const from = chairRef.position;
+  const yaw = Math.atan2(p.x - from.x, p.z - from.z) + Math.PI;
+  hintEl.textContent = "Chair placed — click it to roll again";
+  hintEl.classList.remove("hide");
+  await animateChairTo(p, yaw);
+  return true;
 }
 
 function loadOkamuraAtlasChair(parent) {
@@ -448,15 +599,27 @@ function loadOkamuraAtlasChair(parent) {
     loader.load(
       `${CHAIR_BASE}chair.3ds`,
       (object) => {
-        fitChairModel(object, { targetHeight: 1.2 });
+        fitChairModel(object, { targetHeight: 1.22 });
         colorOkamuraChair(object);
         const wrap = new THREE.Group();
         wrap.name = "okamura-atlas-chair";
+        wrap.userData = {
+          id: "chair",
+          focus: new THREE.Vector3(0.25, 0.85, -0.2),
+        };
         wrap.add(object);
-        // At the desk, angled toward monitors
-        wrap.position.set(0.2, 0, -0.15);
-        wrap.rotation.y = 0.4;
+        const home = chairSpots[0];
+        wrap.position.copy(home.pos);
+        wrap.rotation.y = home.yaw;
+        chairRef = wrap;
         parent.add(wrap);
+        interactive.push(wrap);
+        hotspotDefs.push({
+          id: "chair",
+          label: "Okamura Atlas",
+          object: wrap,
+          offset: new THREE.Vector3(0, 1.35, 0),
+        });
         resolve(wrap);
       },
       undefined,
@@ -539,6 +702,8 @@ function createRoom() {
 
   const floor = addShadow(new THREE.Mesh(new THREE.PlaneGeometry(11, 11), mat(0x6a3b28, { roughness: 0.72 })));
   floor.rotation.x = -Math.PI / 2;
+  floor.name = "floor";
+  floorMesh = floor;
   room.add(floor);
   for (let i = -5; i <= 5; i++) {
     const seam = new THREE.Mesh(new THREE.PlaneGeometry(11, 0.018), mat(0x3f2217, { roughness: 1 }));
@@ -1276,6 +1441,9 @@ function closePanel() {
 }
 
 async function focusObject(id, deviceId) {
+  if (id !== "chair" && id !== "chair-roll") {
+    state.chairMoveMode = false;
+  }
   hintEl.classList.add("hide");
   if (id === "resume") {
     await openResume();
@@ -1283,6 +1451,18 @@ async function focusObject(id, deviceId) {
   }
   if (id === "download") {
     downloadModal.hidden = false;
+    return;
+  }
+  if (id === "chair" || id === "chair-roll") {
+    if (chairRef) {
+      const focus = chairRef.position.clone().add(new THREE.Vector3(0, 0.9, 0));
+      const camPos = focus.clone().add(new THREE.Vector3(1.6, 0.85, 1.7));
+      await animateCamera(camPos, focus, 0.85);
+    }
+    state.chairMoveMode = true;
+    await rollChairNext();
+    openPanel("chair");
+    state.focus = "chair";
     return;
   }
   if (id === "cables") {
@@ -1362,12 +1542,19 @@ function onPointer(event) {
   pointer.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
   raycaster.setFromCamera(pointer, camera);
   const hits = raycaster.intersectObjects(interactive, true);
-  if (!hits.length) return;
-  let obj = hits[0].object;
-  while (obj && !obj.userData?.id) obj = obj.parent;
-  if (!obj?.userData?.id) return;
-  if (obj.userData.id === "device") focusObject("device", obj.userData.deviceId);
-  else focusObject(obj.userData.id);
+  if (hits.length) {
+    let obj = hits[0].object;
+    while (obj && !obj.userData?.id) obj = obj.parent;
+    if (obj?.userData?.id) {
+      if (obj.userData.id === "device") focusObject("device", obj.userData.deviceId);
+      else focusObject(obj.userData.id);
+      return;
+    }
+  }
+  // Floor placement while chair move mode is active
+  if (state.chairMoveMode) {
+    placeChairOnFloor(event.clientX, event.clientY);
+  }
 }
 
 function onMove(event) {
@@ -1375,7 +1562,17 @@ function onMove(event) {
   pointer.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
   pointer.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
   raycaster.setFromCamera(pointer, camera);
-  canvas.style.cursor = raycaster.intersectObjects(interactive, true).length ? "pointer" : "grab";
+  const overInteractive = raycaster.intersectObjects(interactive, true).length > 0;
+  if (overInteractive) {
+    canvas.style.cursor = "pointer";
+    return;
+  }
+  if (state.chairMoveMode && floorMesh) {
+    const floorHits = raycaster.intersectObject(floorMesh, false);
+    canvas.style.cursor = floorHits.length ? "cell" : "grab";
+    return;
+  }
+  canvas.style.cursor = "grab";
 }
 
 scene.add(new THREE.HemisphereLight(0xdde6ff, 0x2a1a12, 0.5));
