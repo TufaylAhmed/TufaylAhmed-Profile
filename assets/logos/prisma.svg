@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 40" role="img" aria-label="Prisma Access">
+  <defs>
+    <linearGradient id="p" x1="0" y1="0" x2="1" y2="1">
+      <stop stop-color="#F04E23"/>
+      <stop offset="1" stop-color="#FF8A3D"/>
+    </linearGradient>
+  </defs>
+  <path d="M8 30 L20 8 L32 30 Z" fill="url(#p)"/>
+  <path d="M20 14 L26 26 H14 Z" fill="#0B1220" opacity="0.35"/>
+  <text x="42" y="18" font-family="Helvetica Neue, Arial, sans-serif" font-size="13" font-weight="700" fill="#F3F5F8">PRISMA</text>
+  <text x="42" y="32" font-family="Helvetica Neue, Arial, sans-serif" font-size="12" font-weight="500" fill="#B8C0CC">ACCESS</text>
+</svg>

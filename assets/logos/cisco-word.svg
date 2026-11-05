@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 140 40" role="img" aria-label="Cisco">
+  <g fill="#1BA0D7">
+    <rect x="4" y="8" width="3.2" height="24" rx="1"/>
+    <rect x="10" y="12" width="3.2" height="16" rx="1"/>
+    <rect x="16" y="10" width="3.2" height="20" rx="1"/>
+    <rect x="22" y="14" width="3.2" height="12" rx="1"/>
+    <rect x="28" y="11" width="3.2" height="18" rx="1"/>
+  </g>
+  <text x="42" y="27" font-family="Helvetica Neue, Arial, sans-serif" font-size="18" font-weight="700" fill="#E8F6FC">cisco</text>
+</svg>

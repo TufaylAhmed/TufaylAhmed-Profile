@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 220 40" role="img" aria-label="Extreme Networks">
+  <rect x="0" y="4" width="32" height="32" rx="6" fill="#6B2D8B"/>
+  <path d="M8 12h16v4.2H13.8v2.4H22v4H13.8V27H24V31H8V12z" fill="#fff"/>
+  <text x="42" y="27" font-family="Helvetica Neue, Arial, sans-serif" font-size="16" font-weight="600" fill="#E8E4EE">Extreme Networks</text>
+</svg>
