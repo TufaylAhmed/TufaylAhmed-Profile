@@ -803,70 +803,101 @@ function buildDeviceChassis({ y, height, color, accent, title, subtitle, deviceI
   u.userData = {
     id: "device",
     deviceId,
-    focus: new THREE.Vector3(-2.55, y, -0.9),
+    focus: new THREE.Vector3(-2.55, y, -0.55),
   };
 
+  // Shorter depth so the faceplate sits proud of the open rack
   const body = addShadow(
     new THREE.Mesh(
-      new RoundedBoxGeometry(0.62, height, 0.72, 1, 0.01),
-      mat(color, { metalness: 0.28, roughness: 0.38 })
+      new RoundedBoxGeometry(0.64, height, 0.55, 1, 0.01),
+      mat(color, { metalness: 0.28, roughness: 0.35 })
     )
   );
   u.add(body);
 
   // Front faceplate label
   const face = new THREE.Mesh(
-    new THREE.PlaneGeometry(0.56, height * 0.42),
+    new THREE.PlaneGeometry(0.58, height * 0.4),
     new THREE.MeshStandardMaterial({
       map: makeLabelTexture([title, subtitle], {
         bg: "#0f1318",
         fg: "#f5f7fa",
-        font: "bold 32px Helvetica",
+        font: "bold 30px Helvetica",
       }),
-      roughness: 0.35,
+      roughness: 0.3,
+      metalness: 0.1,
     })
   );
-  face.position.set(0, height * 0.18, 0.365);
+  face.position.set(0, height * 0.2, 0.285);
   u.add(face);
 
-  // Status LED strip (Palo Alto orange / Cisco blue etc.)
+  // Bright status LED strip
   const led = new THREE.Mesh(
-    new THREE.BoxGeometry(0.52, 0.018, 0.012),
-    mat(accent, { emissive: accent, emissiveIntensity: 1.1 })
+    new THREE.BoxGeometry(0.54, 0.022, 0.014),
+    mat(accent, { emissive: accent, emissiveIntensity: 1.6 })
   );
-  led.position.set(0, height * 0.38, 0.365);
+  led.position.set(0, height * 0.4, 0.285);
   u.add(led);
+  const ledGlow = new THREE.PointLight(accent, 1.4, 0.9, 2);
+  ledGlow.position.set(0, height * 0.4, 0.4);
+  u.add(ledGlow);
 
   // LCD / console window
   const lcd = new THREE.Mesh(
-    new THREE.PlaneGeometry(0.2, 0.05),
-    mat(0x04140c, { emissive: 0x1aff8c, emissiveIntensity: 0.35 })
+    new THREE.PlaneGeometry(0.22, 0.055),
+    mat(0x04140c, { emissive: 0x1aff8c, emissiveIntensity: 0.55 })
   );
-  lcd.position.set(0.16, height * 0.18, 0.368);
+  lcd.position.set(0.17, height * 0.2, 0.288);
   u.add(lcd);
 
-  // Visible RJ45 / SFP ports
+  // Visible RJ45 / SFP ports protruding from the face
   const ports = [];
-  const rowY = -height * 0.22;
+  const rowY = -height * 0.2;
   for (let i = 0; i < portCount; i++) {
-    const px = -0.26 + (i % 8) * 0.065;
-    const py = rowY - Math.floor(i / 8) * 0.05;
-    const port = addShadow(new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.028, 0.035), mat(0x0a0a0a, { metalness: 0.4, roughness: 0.4 })));
-    port.position.set(px, py, 0.37);
-    // Port LED
-    const pLed = new THREE.Mesh(
-      new THREE.BoxGeometry(0.012, 0.008, 0.005),
-      mat(0x22ff66, { emissive: 0x22ff66, emissiveIntensity: 0.8 })
+    const px = -0.27 + (i % 8) * 0.068;
+    const py = rowY - Math.floor(i / 8) * 0.055;
+    const port = addShadow(
+      new THREE.Mesh(
+        new THREE.BoxGeometry(0.045, 0.032, 0.05),
+        mat(0x111111, { metalness: 0.45, roughness: 0.35 })
+      )
     );
-    pLed.position.set(px, py + 0.02, 0.385);
-    u.add(port, pLed);
-    ports.push(new THREE.Vector3(px, py, 0.4));
+    port.position.set(px, py, 0.3);
+    // Metal contact hint inside port
+    const contact = new THREE.Mesh(
+      new THREE.BoxGeometry(0.03, 0.012, 0.01),
+      mat(0xc9a227, { metalness: 0.8, roughness: 0.3 })
+    );
+    contact.position.set(px, py - 0.005, 0.325);
+    // Link/activity LEDs (green + amber)
+    const linkOn = i % 5 !== 0;
+    const pLed = new THREE.Mesh(
+      new THREE.BoxGeometry(0.014, 0.01, 0.008),
+      mat(linkOn ? 0x22ff66 : 0x333333, {
+        emissive: linkOn ? 0x22ff66 : 0x000000,
+        emissiveIntensity: linkOn ? 1.4 : 0,
+      })
+    );
+    pLed.position.set(px - 0.01, py + 0.022, 0.328);
+    const actLed = new THREE.Mesh(
+      new THREE.BoxGeometry(0.014, 0.01, 0.008),
+      mat(linkOn && i % 3 === 0 ? 0xffaa00 : 0x222222, {
+        emissive: linkOn && i % 3 === 0 ? 0xffaa00 : 0x000000,
+        emissiveIntensity: linkOn && i % 3 === 0 ? 1.2 : 0,
+      })
+    );
+    actLed.position.set(px + 0.01, py + 0.022, 0.328);
+    u.add(port, contact, pLed, actLed);
+    ports.push(new THREE.Vector3(px, py, 0.34));
   }
 
-  // Console port
-  const consolePort = addShadow(new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.03, 0.03), mat(0x222)));
-  consolePort.position.set(-0.24, height * 0.18, 0.37);
+  // Console / USB / HA ports
+  const consolePort = addShadow(new THREE.Mesh(new THREE.BoxGeometry(0.055, 0.032, 0.04), mat(0x1a1a1a)));
+  consolePort.position.set(-0.25, height * 0.2, 0.3);
   u.add(consolePort);
+  const usb = addShadow(new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.02, 0.03), mat(0x333)));
+  usb.position.set(-0.18, height * 0.2, 0.3);
+  u.add(usb);
 
   u.position.y = y;
   u.userData.ports = ports;
@@ -878,21 +909,41 @@ function createRack() {
   const rack = new THREE.Group();
   rackRef = rack;
 
-  // Open cabinet (no opaque door) so devices/ports stay visible
-  const cabinet = addShadow(
-    new THREE.Mesh(new RoundedBoxGeometry(0.78, 2.25, 0.9, 2, 0.02), mat(0x15181e, { metalness: 0.4, roughness: 0.42 }))
-  );
-  cabinet.position.y = 1.12;
-  rack.add(cabinet);
-  // Hollow front by dark inset
-  const cavity = new THREE.Mesh(new THREE.BoxGeometry(0.66, 2.05, 0.7), mat(0x0b0d11, { roughness: 0.9 }));
-  cavity.position.set(0, 1.12, 0.05);
-  rack.add(cavity);
+  // Open 4-post rack — no lid / no closed cabinet shell
+  const postMat = mat(0x6a7180, { metalness: 0.85, roughness: 0.28 });
+  const postPositions = [
+    [-0.32, 0.32],
+    [-0.32, -0.28],
+    [0.32, 0.32],
+    [0.32, -0.28],
+  ];
+  postPositions.forEach(([x, z]) => {
+    const post = addShadow(new THREE.Mesh(new THREE.BoxGeometry(0.045, 2.2, 0.045), postMat));
+    post.position.set(x, 1.15, z);
+    rack.add(post);
+    // Rack unit holes hint
+    for (let i = 0; i < 18; i++) {
+      const hole = new THREE.Mesh(
+        new THREE.BoxGeometry(0.01, 0.012, 0.02),
+        mat(0x111)
+      );
+      hole.position.set(x + (x > 0 ? -0.02 : 0.02), 0.35 + i * 0.1, z + (z > 0 ? 0.02 : -0.02));
+      rack.add(hole);
+    }
+  });
 
-  // Rails
+  // Top & bottom frames only (no lid panel)
+  const topFrame = addShadow(new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.05, 0.65), postMat));
+  topFrame.position.set(0, 2.28, 0.02);
+  rack.add(topFrame);
+  const botFrame = addShadow(new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.06, 0.65), postMat));
+  botFrame.position.set(0, 0.08, 0.02);
+  rack.add(botFrame);
+
+  // Side mounting rails (front)
   [-0.3, 0.3].forEach((x) => {
-    const rail = addShadow(new THREE.Mesh(new THREE.BoxGeometry(0.03, 2.0, 0.03), mat(0x7a808a, { metalness: 0.85, roughness: 0.28 })));
-    rail.position.set(x, 1.12, 0.4);
+    const rail = addShadow(new THREE.Mesh(new THREE.BoxGeometry(0.03, 2.05, 0.03), mat(0x9aa3b0, { metalness: 0.9, roughness: 0.25 })));
+    rail.position.set(x, 1.15, 0.34);
     rack.add(rail);
   });
 
@@ -952,7 +1003,8 @@ function createRack() {
   rack.add(pdu);
 
   cableGroup = new THREE.Group();
-  cableGroup.visible = false;
+  cableGroup.visible = true; // cables visible on open rack by default
+  state.cablesOn = true;
   rack.add(cableGroup);
 
   // Prebuild demo patch cables between PA <-> Cisco <-> Extreme <-> Patch
@@ -971,24 +1023,28 @@ function createRack() {
     cableGroup.add(makeCable(a, b, color));
   });
 
-  const rl = new THREE.PointLight(0xff7a3d, 5, 4, 2);
-  rl.position.set(0, 1.9, 0.7);
+  // Front fill lights so port LEDs read clearly
+  const rl = new THREE.PointLight(0xffe0c0, 8, 5, 2);
+  rl.position.set(0.15, 1.6, 1.1);
   rack.add(rl);
+  const rl2 = new THREE.PointLight(0xff7a3d, 3.5, 3.5, 2);
+  rl2.position.set(-0.2, 2.0, 0.8);
+  rack.add(rl2);
 
-  // Front label plaque
+  // Small label on top frame (not a lid)
   const plaque = new THREE.Mesh(
-    new THREE.PlaneGeometry(0.5, 0.08),
+    new THREE.PlaneGeometry(0.55, 0.07),
     new THREE.MeshBasicMaterial({
-      map: makeLabelTexture(["NETWORK RACK · DEMO LAB"], { bg: "#111", fg: "#ffb089", font: "bold 28px Helvetica" }),
+      map: makeLabelTexture(["OPEN RACK · DEMO LAB"], { bg: "#111", fg: "#ffb089", font: "bold 28px Helvetica" }),
     })
   );
-  plaque.position.set(0, 2.28, 0.42);
+  plaque.position.set(0, 2.34, 0.36);
   rack.add(plaque);
 
   rack.position.set(-2.55, 0, -1.35);
-  rack.userData = { id: "rack", focus: new THREE.Vector3(-2.55, 1.35, -0.95) };
+  rack.userData = { id: "rack", focus: new THREE.Vector3(-2.55, 1.4, -0.55) };
   interactive.push(rack);
-  hotspotDefs.push({ id: "rack", label: "Network rack", object: rack, offset: new THREE.Vector3(0, 2.4, 0.25) });
+  hotspotDefs.push({ id: "rack", label: "Network rack", object: rack, offset: new THREE.Vector3(0, 2.45, 0.35) });
   return rack;
 }
 
