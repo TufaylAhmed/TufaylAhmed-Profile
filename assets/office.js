@@ -390,45 +390,49 @@ function loadIKEAPersianCarpet(parent) {
 
 const CHAIR_BASE = "/assets/models/armchair-okamura-atlas/";
 
-function fitChairModel(object, { targetHeight = 1.18 } = {}) {
-  object.updateMatrixWorld(true);
-  let box = new THREE.Box3().setFromObject(object);
+function assembleOkamuraChair(raw, { targetHeight = 1.42 } = {}) {
+  // Keep upright rotation on its own pivot so yaw never hits gimbal lock
+  // (the 3DS is Z-up; TDSLoader leaves that in the child mesh transforms).
+  raw.position.set(0, 0, 0);
+  raw.rotation.set(0, 0, 0);
+  raw.scale.set(1, 1, 1);
+
+  const upright = new THREE.Group();
+  upright.name = "chair-upright";
+  upright.rotation.x = -Math.PI / 2;
+  upright.add(raw);
+
+  const wrap = new THREE.Group();
+  wrap.name = "okamura-atlas-chair";
+  wrap.add(upright);
+  wrap.updateMatrixWorld(true);
+
+  let box = new THREE.Box3().setFromObject(wrap);
   let size = new THREE.Vector3();
   box.getSize(size);
-  let center = new THREE.Vector3();
-  box.getCenter(center);
-  object.position.sub(center);
-
-  // Archibase Okamura Atlas is authored Z-up — map to Three.js Y-up
-  if (size.z >= size.y * 0.9) {
-    object.rotation.x = -Math.PI / 2;
-  } else if (size.x >= size.y * 0.9 && size.x >= size.z * 0.9) {
-    object.rotation.z = Math.PI / 2;
-  }
-  object.updateMatrixWorld(true);
-  box = new THREE.Box3().setFromObject(object);
-  box.getSize(size);
-  box.getCenter(center);
-  object.position.sub(center);
-
   const s = targetHeight / Math.max(size.y, 0.001);
-  object.scale.setScalar(s);
-  object.updateMatrixWorld(true);
-  box = new THREE.Box3().setFromObject(object);
-  box.getSize(size);
-  box.getCenter(center);
-  object.position.x -= center.x;
-  object.position.z -= center.z;
-  object.position.y += -box.min.y;
+  wrap.scale.setScalar(s);
+  wrap.updateMatrixWorld(true);
 
-  // Face local -Z toward the desk: back = highest cluster of upper meshes
+  box = new THREE.Box3().setFromObject(wrap);
+  box.getSize(size);
+  const center = new THREE.Vector3();
+  box.getCenter(center);
+  // Offset the upright pivot so wrap origin = ground center (wrap.scale applies)
+  upright.position.x -= center.x / s;
+  upright.position.z -= center.z / s;
+  upright.position.y -= box.min.y / s;
+  wrap.updateMatrixWorld(true);
+
+  // Face the seat toward local -Z (desk) by yawing the OUTER wrap only
+  box = new THREE.Box3().setFromObject(wrap);
+  const minY = box.min.y;
+  const h = Math.max(box.max.y - box.min.y, 0.001);
   const seat = new THREE.Vector3();
   const back = new THREE.Vector3();
   let seatN = 0;
   let backN = 0;
-  const minY = box.min.y;
-  const h = Math.max(size.y, 0.001);
-  object.traverse((child) => {
+  wrap.traverse((child) => {
     if (!child.isMesh) return;
     const b = new THREE.Box3().setFromObject(child);
     const c = new THREE.Vector3();
@@ -448,80 +452,57 @@ function fitChairModel(object, { targetHeight = 1.18 } = {}) {
     back.multiplyScalar(1 / backN);
     const dir = new THREE.Vector3(back.x - seat.x, 0, back.z - seat.z);
     if (dir.lengthSq() > 1e-6) {
-      dir.normalize();
-      // Want back to sit at local +Z so seat faces local -Z (desk)
-      const yaw = Math.atan2(dir.x, dir.z);
-      object.rotation.y -= yaw;
-      object.updateMatrixWorld(true);
-      box = new THREE.Box3().setFromObject(object);
+      const yaw = Math.atan2(dir.x, dir.z); // back direction
+      wrap.rotation.y = -yaw; // put back at +Z
+      wrap.updateMatrixWorld(true);
+      box = new THREE.Box3().setFromObject(wrap);
       box.getCenter(center);
-      object.position.x -= center.x;
-      object.position.z -= center.z;
-      object.position.y = 0;
-      box = new THREE.Box3().setFromObject(object);
-      object.position.y = -box.min.y;
+      upright.position.x -= center.x / s;
+      upright.position.z -= center.z / s;
+      upright.position.y -= box.min.y / s;
+      wrap.updateMatrixWorld(true);
     }
   }
-  return object;
+
+  colorOkamuraChair(wrap);
+  return wrap;
 }
 
 function colorOkamuraChair(root) {
-  // Mesh / seat / arms / base = black. Only the back outer profile/frame = red.
-  const black = mat(0x0c0c0e, { roughness: 0.68, metalness: 0.06 });
-  const red = mat(0xb91c1c, { roughness: 0.45, metalness: 0.14 });
-  const metal = mat(0x17171a, { roughness: 0.32, metalness: 0.82 });
+  // Mesh/linen/chrome/base = black. Only opaque upper back shell = red profile.
+  const black = mat(0x0c0c0e, { roughness: 0.7, metalness: 0.05 });
+  const red = mat(0xc41e2a, { roughness: 0.42, metalness: 0.12 });
+  const metal = mat(0x141416, { roughness: 0.3, metalness: 0.85 });
 
   root.updateMatrixWorld(true);
   const full = new THREE.Box3().setFromObject(root);
   const fullSize = new THREE.Vector3();
   full.getSize(fullSize);
   const minY = full.min.y;
-  const midZ = (full.min.z + full.max.z) * 0.5;
 
-  const infos = [];
   root.traverse((child) => {
     if (!child.isMesh) return;
     child.castShadow = true;
     child.receiveShadow = true;
+    const matName = `${child.material?.name || ""}`.toLowerCase();
     const b = new THREE.Box3().setFromObject(child);
     const c = new THREE.Vector3();
-    const s = new THREE.Vector3();
     b.getCenter(c);
-    b.getSize(s);
+    const relY = (c.y - minY) / Math.max(fullSize.y, 0.001);
     const count = child.geometry?.attributes?.position?.count || 0;
-    infos.push({
-      child,
-      count,
-      relY: (c.y - minY) / Math.max(fullSize.y, 0.001),
-      center: c,
-      size: s,
-      name: `${child.name || ""} ${child.material?.name || ""}`.toLowerCase(),
-    });
-  });
 
-  // Densest parts are the fabric mesh — never red
-  const byCount = [...infos].sort((a, b) => b.count - a.count);
-  const meshFabric = new Set(byCount.slice(0, 4).map((i) => i.child));
-
-  infos.forEach((info) => {
-    const { child, count, relY, center, size, name } = info;
-    const isChrome = /chrome|metal|steel/.test(name);
-    const isFabric =
-      meshFabric.has(child) || count >= 5000 || /linen|mesh|fabric/.test(name);
-
-    // Back profile = low/mid-poly shell sitting on the rear half, above the seat
-    const towardBack = center.z >= midZ - fullSize.z * 0.05;
-    const thinShell = Math.min(size.x, size.z) < fullSize.x * 0.55;
+    const isLinen = /linen|fabric|mesh/.test(matName);
+    const isChrome = /chrome|metal|steel/.test(matName);
+    // Upper opaque shell / rim — not the dense mesh fabrics
     const isBackProfile =
-      !isFabric &&
-      relY > 0.42 &&
-      count < 4500 &&
-      towardBack &&
-      (thinShell || relY > 0.58);
+      !isLinen &&
+      !isChrome &&
+      relY >= 0.55 &&
+      count < 7000;
 
     let chosen = black;
     if (isBackProfile) chosen = red;
-    else if (isChrome && relY < 0.4) chosen = metal;
+    else if (isChrome) chosen = metal;
 
     child.material = chosen.clone();
     child.material.side = THREE.DoubleSide;
@@ -599,18 +580,15 @@ function loadOkamuraAtlasChair(parent) {
     loader.load(
       `${CHAIR_BASE}chair.3ds`,
       (object) => {
-        fitChairModel(object, { targetHeight: 1.22 });
-        colorOkamuraChair(object);
-        const wrap = new THREE.Group();
-        wrap.name = "okamura-atlas-chair";
+        const wrap = assembleOkamuraChair(object, { targetHeight: 1.42 });
         wrap.userData = {
           id: "chair",
-          focus: new THREE.Vector3(0.25, 0.85, -0.2),
+          focus: new THREE.Vector3(0.25, 0.95, -0.2),
         };
-        wrap.add(object);
         const home = chairSpots[0];
+        // home.yaw is added on top of the already-faced local orientation
+        wrap.rotation.y += home.yaw;
         wrap.position.copy(home.pos);
-        wrap.rotation.y = home.yaw;
         chairRef = wrap;
         parent.add(wrap);
         interactive.push(wrap);
@@ -618,7 +596,7 @@ function loadOkamuraAtlasChair(parent) {
           id: "chair",
           label: "Okamura Atlas",
           object: wrap,
-          offset: new THREE.Vector3(0, 1.35, 0),
+          offset: new THREE.Vector3(0, 1.45, 0),
         });
         resolve(wrap);
       },
